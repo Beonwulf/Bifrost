@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>404 – Bifröst</title>
+<style>
+	* { box-sizing: border-box; margin: 0; padding: 0; }
+	body {
+		background: #0e0e14;
+		color: #c8c8d4;
+		font-family: 'Segoe UI', system-ui, sans-serif;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 100vh;
+		padding: 2rem;
+	}
+	.card {
+		max-width: 520px;
+		width: 100%;
+		text-align: center;
+	}
+	.code {
+		font-size: 7rem;
+		font-weight: 700;
+		color: #5a4fcf;
+		line-height: 1;
+		letter-spacing: -4px;
+	}
+	h1 {
+		font-size: 1.4rem;
+		margin: 1rem 0 0.5rem;
+		color: #e0dff8;
+	}
+	p {
+		color: #6b6b80;
+		font-size: 0.9rem;
+		margin-bottom: 0.25rem;
+	}
+	.url {
+		display: inline-block;
+		margin-top: 1rem;
+		padding: 0.4rem 0.9rem;
+		background: #1a1a28;
+		border: 1px solid #2e2e45;
+		border-radius: 6px;
+		font-family: monospace;
+		font-size: 0.85rem;
+		color: #9147ff;
+		word-break: break-all;
+	}
+</style>
+</head>
+<body>
+	<div class="card">
+		<div class="code">404</div>
+		<h1>Kein Pfad durch den Nebel gefunden.</h1>
+		<p>Die angefragte Ressource existiert nicht.</p>
+		<span class="url">{{ $url }}</span>
+	</div>
+</body>
+</html>

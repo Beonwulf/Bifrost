@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="{{ $lang }}">
+<head>
+{% partial head %}
+{% if $styles %}{{{ $styles }}}{% endif %}
+</head>
+<body>
+
+{% if $nav %}
+<nav class="nav">
+	<div class="nav__inner">
+		<a class="nav__brand" href="/">{% if $brand %}{{{ $brand }}}{% endif %}{% unless $brand %}Bifröst{% endunless %}</a>
+		<div class="nav__links">
+			{{{ $nav }}}
+		</div>
+	</div>
+</nav>
+{% endif %}
+
+<main class="main">
+	{% partial flash %}
+	{% yield %}
+</main>
+
+{% if $scripts %}{{{ $scripts }}}{% endif %}
+
+<style>
+	.nav {
+		position: sticky;
+		top: 0;
+		z-index: 100;
+		background: rgba(14,14,20,0.9);
+		backdrop-filter: blur(8px);
+		border-bottom: 1px solid var(--border);
+	}
+	.nav__inner {
+		max-width: 1100px;
+		margin: 0 auto;
+		padding: 0 1.5rem;
+		height: 54px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+	.nav__brand {
+		font-weight: 600;
+		font-size: 1rem;
+		color: var(--text-head);
+	}
+	.nav__links {
+		display: flex;
+		gap: 1.25rem;
+		align-items: center;
+		font-size: 0.9rem;
+	}
+	.main {
+		max-width: 1100px;
+		margin: 0 auto;
+		padding: 2rem 1.5rem;
+	}
+</style>
+
+</body>
+</html>

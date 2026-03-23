@@ -1,0 +1,17 @@
+{% if $flash %}
+<div class="flash flash--{{ $flash.type }}" role="alert">
+	{{ $flash.message }}
+</div>
+<style>
+	.flash {
+		padding: 0.75rem 1.1rem;
+		border-radius: var(--radius);
+		border: 1px solid;
+		margin-bottom: 1.25rem;
+		font-size: 0.9rem;
+	}
+	.flash--success { background: #0e2318; border-color: #2a9d5c; color: #4fd88a; }
+	.flash--error   { background: #200e0e; border-color: #9b2020; color: #e06060; }
+	.flash--info    { background: #0e1022; border-color: #5a4fcf; color: #a89af5; }
+</style>
+{% endif %}

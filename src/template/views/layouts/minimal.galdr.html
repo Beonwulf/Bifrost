@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="{{ $lang }}">
+<head>
+{% partial head %}
+{% if $styles %}{{{ $styles }}}{% endif %}
+</head>
+<body class="body--centered">
+
+<div class="card">
+	{% if $cardTitle %}<h1 class="card__title">{{ $cardTitle }}</h1>{% endif %}
+	{% partial flash %}
+	{% yield %}
+</div>
+
+{% if $scripts %}{{{ $scripts }}}{% endif %}
+
+<style>
+	body.body--centered {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 100vh;
+		padding: 2rem;
+	}
+	.card {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: calc(var(--radius) * 1.5);
+		padding: 2rem 2.25rem;
+		width: 100%;
+		max-width: 460px;
+	}
+	.card__title {
+		margin-bottom: 1.5rem;
+		font-size: 1.25rem;
+	}
+</style>
+
+</body>
+</html>
