@@ -255,14 +255,35 @@ bifrost.use(async ($req, $res, $next) => {
 
 ```js
 // Serve static files from /public
+// Supports ETag + 304 Not Modified out of the box
 bifrost.use(Bifrost.createStaticRune('public'));
 
 // Parse JSON body (POST/PUT/PATCH) → req.body
+// Optional: { maxBytes: 2 * 1024 * 1024 } (default: 1 MB)
 bifrost.use(Bifrost.createBodyParserRune());
 
 // Add res.json() and res.error()
 bifrost.use(Bifrost.createResponseHelperRune());
+
+// Security headers (CSP, HSTS, X-Frame-Options, ...)
+// Recommended: register as the very first rune
+bifrost.use(Bifrost.createSecurityHeadersRune({
+    // csp: "default-src 'self'; ...",  // override default CSP
+    hsts: true,        // Strict-Transport-Security (HTTPS only)
+    hstsMaxAge: 31_536_000,
+}));
+
+// Rate limiting — Fixed Window per IP, no external package required
+// trustProxy: true when behind nginx/Caddy (reads X-Forwarded-For)
+bifrost.use(Bifrost.createRateLimitRune({ points: 100, duration: 60 }));
+bifrost.use(Bifrost.createRateLimitRune({ points: 100, duration: 60, trustProxy: true }));
 ```
+
+| Rune | Response Headers set |
+|---|---|
+| `createStaticRune` | `ETag`, `Content-Type`, `Content-Length`, `COEP`, `COOP` |
+| `createSecurityHeadersRune` | `CSP`, `HSTS`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` |
+| `createRateLimitRune` | `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` |
 
 ---
 

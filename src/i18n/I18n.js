@@ -28,9 +28,8 @@
  * {{ t.page_title }}        // → Key 'page.title' als 'page_title' abrufbar über Proxy
  */
 
-import { readFile }  from 'node:fs/promises';
-import { join }      from 'node:path';
-import { existsSync } from 'node:fs';
+import { readFile, access } from 'node:fs/promises';
+import { join }             from 'node:path';
 
 const DEV = process.env.NODE_ENV !== 'production';
 
@@ -102,9 +101,9 @@ export class I18n {
 	static async #loadNs($locale, $ns) {
 		const key = I18n.#cacheKey($locale, $ns);
 
-		// Cache-Hit (nur in production oder wenn bereits geladen)
+		// Production: Cache-Hit → sofort zurück
+		// Dev: Cache überspringen → Datei immer neu lesen (Hot-Reload)
 		if (!DEV && I18n.#cache.has(key)) return I18n.#cache.get(key);
-		if (DEV  && I18n.#cache.has(key)) return I18n.#cache.get(key);
 
 		if (!I18n.#baseDir) {
 			throw new Error('[I18n] Kein Basisverzeichnis konfiguriert. I18n.configure({ dir }) aufrufen.');
@@ -112,8 +111,11 @@ export class I18n {
 
 		const filePath = join(I18n.#baseDir, $locale, `${$ns}.json`);
 
-		if (!existsSync(filePath)) {
-			// Namespace existiert nicht → leeres Objekt, nicht cachen in dev
+		// Async-Existenzprüfung — kein blockierender existsSync im Request-Pfad
+		try {
+			await access(filePath);
+		} catch {
+			// Namespace existiert nicht → leeres Objekt (in production cachen)
 			if (!DEV) I18n.#cache.set(key, {});
 			return {};
 		}
@@ -198,7 +200,13 @@ export class I18n {
 	static #parseCookie($cookieHeader, $name) {
 		for (const part of $cookieHeader.split(';')) {
 			const [key, ...vals] = part.trim().split('=');
-			if (key.trim() === $name) return decodeURIComponent(vals.join('=').trim());
+			if (key.trim() === $name) {
+				try {
+					return decodeURIComponent(vals.join('=').trim());
+				} catch {
+					return null; // Korruptes Cookie → ignorieren
+				}
+			}
 		}
 		return null;
 	}

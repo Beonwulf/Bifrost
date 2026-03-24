@@ -83,7 +83,7 @@
  */
 
 import { readFile }    from 'node:fs/promises';
-import { resolve, join } from 'node:path';
+import { resolve, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __galdrDir = fileURLToPath(new URL('.', import.meta.url));
@@ -198,10 +198,11 @@ export class Galdr {
 		const filename = $name.endsWith('.galdr.html') ? $name : `${$name}.galdr.html`;
 
 		for (const dir of $dirs) {
-			const filePath = resolve(dir, filename);
+			const resolvedDir = resolve(dir);
+			const filePath    = join(resolvedDir, filename);
 
-			// ── Jail: resolvedPath muss innerhalb des Verzeichnisses liegen ─────
-			if (!filePath.startsWith(resolve(dir))) continue;
+			// ── Jail: filePath muss innerhalb des Verzeichnisses liegen (inkl. sep) ───────────
+			if (!filePath.startsWith(resolvedDir + sep) && filePath !== resolvedDir) continue;
 
 			if (Galdr.#cfg.cache && Galdr.#cache.has(filePath)) {
 				return Galdr.#cache.get(filePath);
@@ -237,12 +238,12 @@ export class Galdr {
 		});
 
 		out = out.replace(/\{#[\s\S]*?#\}/g, '');  // {# Kommentare #} entfernen
-		out = await Galdr.#resolveLayout(out, ctx);
-		out = await Galdr.#resolvePartials(out, ctx);
-		out = await Galdr.#resolveComponents(out, ctx);
-		out = await Galdr.#resolveIncludes(out, ctx);
-		out = await Galdr.#resolveBlocks(out, ctx);
-		out =       Galdr.#resolveUrlTags(out, ctx);
+		if (out.includes('{% layout'))                            out = await Galdr.#resolveLayout(out, ctx);
+		if (out.includes('{% partial'))                           out = await Galdr.#resolvePartials(out, ctx);
+		if (out.includes('{% component') || out.includes('<x-')) out = await Galdr.#resolveComponents(out, ctx);
+		if (out.includes('{% include'))                           out = await Galdr.#resolveIncludes(out, ctx);
+		if (out.includes('{%'))                                   out = await Galdr.#resolveBlocks(out, ctx);
+		if (out.includes('{% url'))                               out =       Galdr.#resolveUrlTags(out, ctx);
 		out =       Galdr.#interpolate(out, ctx);
 
 		// Geschützte Blöcke wiederherstellen.
@@ -540,7 +541,15 @@ export class Galdr {
 				}));
 
 			const parts = await Promise.all(entries.map(({ item, key, index, last }) => {
-				const itemProps = (typeof item === 'object' && item !== null) ? item : {};
+				// Prototype-Pollution-Schutz: __proto__, constructor, prototype aus Item-Daten blockieren
+				const itemProps = {};
+				if (typeof item === 'object' && item !== null) {
+					for (const k of Object.keys(item)) {
+						if (k !== '__proto__' && k !== 'constructor' && k !== 'prototype') {
+							itemProps[k] = item[k];
+						}
+					}
+				}
 				const ctx = {
 					// Outer-Scope (flache Werte, damit äußere Variablen zugänglich bleiben)
 					...$data,
@@ -573,8 +582,11 @@ export class Galdr {
 
 	// {% set $varName = value %}
 	static #processSet($source, $data) {
+		const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
 		return $source.replace(/\{%\s*set\s+\$?([a-zA-Z_]\w*)\s*=\s*([\s\S]*?)\s*%\}/g, (_, name, rawVal) => {
-			$data[name] = Galdr.#parseSetValue(rawVal.trim(), $data);
+			if (!FORBIDDEN.has(name)) {
+				$data[name] = Galdr.#parseSetValue(rawVal.trim(), $data);
+			}
 			return '';
 		});
 	}
@@ -726,7 +738,16 @@ export class Galdr {
 			case 'lower':    return str.toLowerCase();
 			case 'trim':     return str.trim();
 			case 'nl2br':    return str.replace(/\n/g, '<br>');
-			case 'json':     return JSON.stringify($val);
+			case 'json': {
+				const serialized = JSON.stringify($val);
+				// Verhindert </script>-Ausbruch und HTML-Injection in <script>-Blöcken
+				return serialized
+					.replace(/&/g,    '\\u0026')
+					.replace(/</g,    '\\u003c')
+					.replace(/>/g,    '\\u003e')
+					.replace(/\u2028/g, '\\u2028')
+					.replace(/\u2029/g, '\\u2029');
+			}
 
 			case 'truncate': {
 				const max    = parseInt($args[0] ?? '100', 10);

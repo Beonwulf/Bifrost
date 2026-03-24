@@ -135,8 +135,10 @@ export class BBController {
 			const _langSwitch = await NavRegistry.getLangSwitch(locale);
 
 			// SEO-Defaults — Priorität: $data > Instanz-Property > Fallback
-			const proto       = this.req.headers['x-forwarded-proto'] ?? 'http';
-			const host        = this.req.headers.host ?? 'localhost';
+			// Host/Proto aus vertrauenswürdiger Quelle: APP_PROTO/APP_HOST env-Vars haben Vorrang
+			const proto = process.env.APP_PROTO
+				?? (this.req.socket?.encrypted ? 'https' : (this.req.headers['x-forwarded-proto']?.split(',')[0].trim() ?? 'http'));
+			const host  = process.env.APP_HOST ?? this.req.headers.host ?? 'localhost';
 			const seoDefaults = {
 				description: $data.description ?? this.description,
 				keywords:    $data.keywords    ?? this.keywords,
@@ -152,9 +154,10 @@ export class BBController {
 			if (!$data.title) $data.title = this.title ?? $data.page?.title ?? null;
 			// Locale aus URL-Präfix als Cookie persistieren
 			if (this.req._locale) {
+				const isHttps = this.req.socket?.encrypted || this.req.headers['x-forwarded-proto']?.split(',')[0].trim() === 'https';
 				this.res.setHeader(
 					'Set-Cookie',
-					`locale=${this.req._locale}; Path=/; Max-Age=31536000; SameSite=Lax`
+					`locale=${this.req._locale}; Path=/; Max-Age=31536000; SameSite=Lax${isHttps ? '; Secure' : ''}`
 				);
 			}
 		}

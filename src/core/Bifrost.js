@@ -92,23 +92,42 @@ export class Bifrost extends BifrostStatic {
 	}
 
 
-	#addRoute(method, path, handler) {
-		this.#routes.push({ method, path, handler });
+	#addRoute(method, $path, $handler) {
+		const route = { method, path: $path, handler: $handler };
+
+		// Parametrische Routen (:param) einmalig in RegExp übersetzen
+		if ($path.includes(':')) {
+			const paramNames = [];
+			const pattern = $path.replace(/:([^/]+)/g, ($_, $name) => {
+				paramNames.push($name);
+				return '([^/]+)';
+			});
+			route.regex      = new RegExp(`^${pattern}$`);
+			route.paramNames = paramNames;
+		}
+
+		this.#routes.push(route);
 	}
 
 
 	/**
 	 * Socket.io "andocken"
+	 *
+	 * @param {object} [$options]  Socket.io-Optionen — werden über den Default gemergt.
+	 *
+	 * Sicherheitshinweis: Im Default ist CORS auf die Server-Origin beschränkt.
+	 * Für Production explizit setzen:
+	 *   bridge.attachSockets({ cors: { origin: 'https://meine-app.de', methods: ['GET','POST'] } })
 	 */
 	async attachSockets($options = {}) {
 		await this.initServer();
-		// CORS ist bei Sockets oft der Endgegner
+		// Sicherer Default: keine Wildcard-Origin in Production.
+		// Kann per $options überschrieben werden.
 		const defaultOptions = {
 			cors: {
-				origin: "*", // Erlaubt alle Origins
-				//methods: ["GET", "POST"]
+				origin: false, // Keine Cross-Origin-Verbindungen per Default
 			},
-			transports: ['websocket'] // Erzwingt Websocket, wenn der Client das auch tut
+			transports: ['websocket'],
 		};
 
 		if( this.#io  === null) {
@@ -130,6 +149,9 @@ export class Bifrost extends BifrostStatic {
 			const engine = this.#sslOptions ? https : http;
 
 			this.#server = engine.createServer(this.#sslOptions || {}, this.#handleRequest.bind(this) );
+			// Schutz gegen Slowloris / hängende Verbindungen (30 s)
+			this.#server.timeout       = 30_000;
+			this.#server.keepAliveTimeout = 5_000;
 		}
 		return this.#server;
 	}
@@ -163,20 +185,28 @@ export class Bifrost extends BifrostStatic {
 			return; // Socket.io übernimmt hier intern über den 'upgrade' listener
 		}
 
+		// Sicherer URL-Parse: Host-Header kann manipuliert sein → immer localhost als Basis
+		let url;
+		try {
+			url = new URL(req.url, 'http://localhost');
+		} catch {
+			res.writeHead(400);
+			res.end('Bad Request');
+			return;
+		}
 
 		// --- Locale-Prefix-Stripping (SEO-URLs: /de/about → req._locale='de', /about) ---
 		if (this.#locales) {
-			const rawUrl = new URL(req.url, `https://${req.headers.host}`);
-			const m = rawUrl.pathname.match(/^\/([a-z]{2})(\/.*)?$/);
+			const m = url.pathname.match(/^\/([a-z]{2})(\/.*)?$/);
 			if (m && this.#locales.has(m[1])) {
 				req._locale = m[1];
 				const newPath = m[2] || '/';
-				req.url = newPath + (rawUrl.search || '');
+				req.url = newPath + (url.search || '');
+				url = new URL(req.url, 'http://localhost');
 			}
 		}
 
 		// --- Routing Logik (Erweitert für Parameter :id) ---
-		const url = new URL(req.url, `https://${req.headers.host}`);
 
 		let route = null;
 		let params = {};
@@ -190,30 +220,15 @@ export class Bifrost extends BifrostStatic {
 				break;
 			}
 
-			// Parameter Check (z.B. /api/user/:id)
-			if (r.path.includes(':')) {
-				const pathParts = r.path.split('/');
-				const urlParts = url.pathname.split('/');
-
-				if (pathParts.length === urlParts.length) {
-					let match = true;
-					const tempParams = {};
-
-					for (let i = 0; i < pathParts.length; i++) {
-						if (pathParts[i].startsWith(':')) {
-							const paramName = pathParts[i].substring(1);
-							tempParams[paramName] = urlParts[i];
-						} else if (pathParts[i] !== urlParts[i]) {
-							match = false;
-							break;
-						}
+			// Parameter-Check: vorkompilierte Regex — O(1) statt split + Loop
+			if (r.regex) {
+				const m = r.regex.exec(url.pathname);
+				if (m) {
+					for (let i = 0; i < r.paramNames.length; i++) {
+						params[r.paramNames[i]] = m[i + 1];
 					}
-
-					if (match) {
-						route = r;
-						params = tempParams;
-						break;
-					}
+					route = r;
+					break;
 				}
 			}
 		}
@@ -281,8 +296,10 @@ export class Bifrost extends BifrostStatic {
 
 		return new Promise((resolve) => {
 			this.#server.close(() => {
-				this.#io.close();
-				this.#io = null;
+				if (this.#io) {
+					this.#io.close();
+					this.#io = null;
+				}
 				console.log('💀 Die Brücke ist erloschen.');
 				resolve();
 			});

@@ -1,4 +1,4 @@
-import fs from 'fs';
+import { readdir } from 'node:fs/promises';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { BBController } from './BBController.js';
@@ -20,7 +20,7 @@ export class Router {
 		console.log(`🗺️  Lade Routen aus: ${$dir}`);
 
 		try {
-			const files = fs.readdirSync($dir).filter(f => f.endsWith('.js'));
+			const files = (await readdir($dir)).filter(f => f.endsWith('.js'));
 
 			for (const file of files) {
 				const filePath = pathToFileURL(path.join($dir, file)).href;
@@ -52,7 +52,7 @@ export class Router {
 
 		let files;
 		try {
-			files = fs.readdirSync($dir).filter(f => f.endsWith('.js'));
+			files = (await readdir($dir)).filter(f => f.endsWith('.js'));
 		} catch ($err) {
 			console.error(`❌ Controller-Ordner nicht lesbar: ${$dir}`, $err);
 			return;
