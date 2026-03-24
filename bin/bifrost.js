@@ -2082,6 +2082,20 @@ if ($sections.length && $navLinks.length) {
 
 		// ── App-Einstiegspunkt ────────────────────────────────────────────────
 
+		'package.json': `{
+	"name": "meine-bifrost-app",
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"start": "node app.js",
+		"dev":   "node --watch app.js"
+	},
+	"dependencies": {
+		"bifrost": "latest"
+	}
+}
+`,
+
 		'app.js': `import { BifrostApp, I18n, NavRegistry } from 'bifrost';
 import { fileURLToPath } from 'node:url';
 import { join }          from 'node:path';
@@ -2104,10 +2118,12 @@ I18n.configure({
 BifrostApp.setLocales(['de', 'en', 'fr', 'es', 'it']);
 
 await app.startup({
-	port:           process.env.PORT || 3000,
-	static:         'public',
-	bodyParser:     true,
+	port:            process.env.PORT || 3000,
+	static:          'public',
+	bodyParser:      true,
 	responseHelpers: true,
+	securityHeaders: true,
+	rateLimit:       { points: 100, duration: 60 }, // trustProxy: true hinter nginx/Caddy
 });
 
 await app.loadControllers(join(__dir, 'controllers'));

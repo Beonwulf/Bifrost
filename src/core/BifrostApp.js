@@ -35,6 +35,8 @@ export class BifrostApp {
 		compression:     false,
 		responseHelpers: true,
 		locales:         null,
+		securityHeaders: false, // true oder Options-Objekt übergeben
+		rateLimit:       false, // true oder { points, duration, trustProxy } übergeben
 	};
 
 	// ── Konfiguration (statische Setter) ──────────────────────────────────────
@@ -191,7 +193,13 @@ export class BifrostApp {
 		// Locale-Prefix-Routing konfigurieren
 		if (cfg.locales) this.#bifrost.setLocales(cfg.locales);
 
-		// Runen registrieren
+		// Runen registrieren — Reihenfolge: Security → RateLimit → ResponseHelpers → Body → Static
+		if (cfg.securityHeaders) this.#bifrost.use(Bifrost.createSecurityHeadersRune(
+			typeof cfg.securityHeaders === 'object' ? cfg.securityHeaders : {}
+		));
+		if (cfg.rateLimit)       this.#bifrost.use(Bifrost.createRateLimitRune(
+			typeof cfg.rateLimit === 'object' ? cfg.rateLimit : {}
+		));
 		if (cfg.responseHelpers) this.#bifrost.use(Bifrost.createResponseHelperRune());
 		if (cfg.bodyParser)      this.#bifrost.use(Bifrost.createBodyParserRune());
 		if (cfg.static)          this.#bifrost.use(Bifrost.createStaticRune(cfg.static));
