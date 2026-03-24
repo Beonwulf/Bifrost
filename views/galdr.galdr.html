@@ -1,0 +1,42 @@
+{% layout "base" %}
+    <section class="hero hero--sm">
+        <h1>Galdr &mdash; Template-Engine</h1>
+        <p>Die Bifröst-eigene Template-Engine. Kein Handlebars, kein EJS &mdash; Galdr.</p>
+    </section>
+
+    <div class="container" style="padding-top:var(--sp-2xl);padding-bottom:var(--sp-3xl)">
+
+        <div class="grid grid--auto" style="margin-bottom:var(--sp-2xl)">
+            {% each $features %}
+            <div class="card">
+                <div class="card-header">{{ name }}</div>
+                <div class="card-body">
+                    <p class="text-muted text-sm">{{{ desc }}}</p>
+                </div>
+            </div>
+            {% endeach %}
+        </div>
+
+        <div class="card">
+            <div class="card-header">Syntax-Referenz</div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>Tag</th><th>Beschreibung</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>{{ var }}</code></td><td>Variable ausgeben (HTML-escaped)</td></tr>
+                        <tr><td><code>{{{ var }}}</code></td><td>Variable ausgeben (raw HTML)</td></tr>
+                        <tr><td><code>{% layout "name" %}</code></td><td>Layout wählen</td></tr>
+                        <tr><td><code>{% yield %}</code></td><td>Inhalt einfügen (im Layout)</td></tr>
+                        <tr><td><code>{% partial name %}</code></td><td>Partial einbinden</td></tr>
+                        <tr><td><code>{% include "x" with $obj %}</code></td><td>Partial mit eigenem Kontext</td></tr>
+                        <tr><td><code>{% if cond %}...{% endif %}</code></td><td>Bedingter Block</td></tr>
+                        <tr><td><code>{% each $arr %}...{% endeach %}</code></td><td>Schleife</td></tr>
+                        <tr><td><code>{% set $x = val %}</code></td><td>Template-Variable setzen</td></tr>
+                        <tr><td><code>{{ val | filter }}</code></td><td>Filter / Pipe</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+{% endlayout %}

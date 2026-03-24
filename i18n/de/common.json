@@ -1,0 +1,13 @@
+{
+    "nav": {
+        "home": "Home",
+        "blog": "Blog",
+        "projects": "Projekte",
+        "impressum": "Impressum",
+        "datenschutz": "Datenschutz",
+        "cookies": "Cookies",
+        "docs": "Doku",
+        "features": "Features",
+        "galdr": "Galdr Engine"
+    }
+}

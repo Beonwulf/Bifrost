@@ -1,0 +1,34 @@
+{% layout "base" %}
+    <section class="hero">
+        <img src="/logo.svg" alt="Bifröst" style="width:80px;height:80px;margin-bottom:var(--sp-lg)">
+        <h1>Bifröst</h1>
+        <p>Lightweight Node.js Framework &mdash; Galdr Templates &middot; NavRegistry &middot; I18n &middot; Socket.IO</p>
+        <div style="display:flex;gap:var(--sp-md);justify-content:center;flex-wrap:wrap;margin-top:var(--sp-lg)">
+            <a class="btn btn-primary" href="/docs">Dokumentation</a>
+            <a class="btn btn-outline-light" href="https://github.com/Beonwulf/Bifrost" target="_blank" rel="noopener">GitHub &rarr;</a>
+        </div>
+    </section>
+
+    <div class="container" style="padding-top:var(--sp-2xl);padding-bottom:var(--sp-3xl)">
+        <div class="grid grid--3">
+            <div class="card">
+                <div class="card-body">
+                    <h3 style="margin-bottom:var(--sp-xs)">Galdr Templates</h3>
+                    <p class="text-muted text-sm">Eigene Template-Engine mit Layouts, Partials, i18n und bedingten Blöcken.</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h3 style="margin-bottom:var(--sp-xs)">NavRegistry</h3>
+                    <p class="text-muted text-sm">Controller registrieren sich automatisch für Navigationen via <code>static menu</code>.</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h3 style="margin-bottom:var(--sp-xs)">I18n &amp; LangSwitch</h3>
+                    <p class="text-muted text-sm">Mehrsprachigkeit mit JSON-Namespace-Dateien und automatischem LangSwitch.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endlayout %}
