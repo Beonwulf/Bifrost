@@ -1,5 +1,7 @@
 # Bifröst 🌈
 
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/beonwulf)
+
 > Standalone Node.js HTTP/HTTPS framework — no Express, no dependencies except `socket.io` and `selfsigned`.
 
 Bifröst combines a custom HTTP/HTTPS server, a middleware pipeline (Runes), class-based routing, WebSocket support via Socket.io and a built-in template engine ([Galdr](./src/template/README.md)) in one lean, modular package.

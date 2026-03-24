@@ -1,0 +1,12 @@
+<ul class="nav-links{% if class %} {{ class }}{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
+	{% each items %}
+	<li class="nav-item{% if liclass %} {{ liclass }}{% endif %}"{% if liid %} id="{{ liid }}"{% endif %}>
+		{% if external %}
+		<a href="{{ slug }}" target="_blank" rel="noopener noreferrer"{% if active %} class="active"{% endif %}>{{ label }}</a>
+		{% endif %}
+		{% unless external %}
+		<a href="{% url slug %}"{% if active %} class="active"{% endif %}>{{ label }}</a>
+		{% endunless %}
+	</li>
+	{% endeach %}
+</ul>

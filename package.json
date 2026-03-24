@@ -4,11 +4,15 @@
 	"description": "Bifröst — Eigenständiges Node.js HTTP/HTTPS-Framework mit WebSocket, Template Engine und Controller-System.",
 	"type": "module",
 	"main": "index.js",
+	"bin": {
+		"bifrost": "./bin/bifrost.js"
+	},
 	"exports": {
 		".": "./index.js"
 	},
 	"files": [
 		"index.js",
+		"bin/",
 		"src/"
 	],
 	"engines": {
@@ -26,5 +30,9 @@
 		"template-engine",
 		"bifrost"
 	],
-	"license": "MIT"
+	"license": "MIT",
+	"funding": {
+		"type": "ko_fi",
+		"url": "https://ko-fi.com/beonwulf"
+	}
 }

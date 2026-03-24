@@ -1,0 +1,9 @@
+.github/
+.vscode/
+.workspace/
+data/bifrost/
+dist/
+node_modules/
+TestApp/
+.env
+.DS_Store

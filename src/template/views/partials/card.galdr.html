@@ -1,0 +1,11 @@
+<div class="card{% if class %} {{ class }}{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
+	{% if _slots.head %}
+	<div class="card-header">{{{ _slots.head }}}</div>
+	{% elseif head %}
+	<div class="card-header">{{ head }}</div>
+	{% endif %}
+	<div class="card-body">{{{ _slots.body }}}{{{ slot }}}</div>
+	{% if _slots.foot %}
+	<div class="card-footer">{{{ _slots.foot }}}</div>
+	{% endif %}
+</div>

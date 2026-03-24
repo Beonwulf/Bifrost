@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { BBController } from './BBController.js';
+import { NavRegistry }  from './NavRegistry.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -108,7 +110,17 @@ export class Router {
 
 				console.log(`   ✅ ${method.toUpperCase()} ${controllerPath} → ${ControllerClass.name}`);
 			}
-		}
+
+			// Menu-Einträge in NavRegistry registrieren
+			if (Array.isArray(ControllerClass.menu) && ControllerClass.menu.length > 0) {
+				for (const entry of ControllerClass.menu) {
+					const { lang, ...navKeys } = entry;
+					for (const [$nav, order] of Object.entries(navKeys)) {
+						NavRegistry.register($nav, { slug: controllerPath, lang, order });
+					}
+				}
+			}
+        }
 	}
 
 }

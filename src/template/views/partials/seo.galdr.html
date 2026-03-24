@@ -1,0 +1,36 @@
+{{# SEO Meta Tags — Bifröst Built-in Partial
+	Verwendung: {% partial seo %} oder {% include "seo" %}
+
+	Unterstützte Template-Variablen:
+	  title        — Seiten-Titel (required)
+	  description  — Meta-Description
+	  keywords     — Komma-separierte Keywords (optional)
+	  canonical    — Kanonische URL (optional)
+	  robots       — z.B. 'noindex, nofollow' (default: index, follow)
+	  ogTitle      — Open Graph Titel (fallback: title)
+	  ogDescription — Open Graph Description (fallback: description)
+	  ogImage      — Open Graph Bild-URL
+	  ogType       — Open Graph Typ (default: website)
+	  ogUrl        — Open Graph URL (fallback: canonical)
+	  twitterCard  — 'summary' | 'summary_large_image' (default: summary)
+	  twitterSite  — Twitter Handle (@name)
+	  lang         — Sprach-Attribut für <html> (default: _locale)
+#}}
+<meta name="description" content="{{ description }}">
+{% if keywords %}<meta name="keywords" content="{{ keywords }}">{% endif %}
+<meta name="robots" content="{{ robots | default:'index, follow' }}">
+{% if canonical %}<link rel="canonical" href="{{ canonical }}">{% endif %}
+
+<!-- Open Graph -->
+<meta property="og:type"        content="{{ ogType | default:'website' }}">
+<meta property="og:title"       content="{{ ogTitle | default:title }}">
+<meta property="og:description" content="{{ ogDescription | default:description }}">
+{% if ogImage %}<meta property="og:image" content="{{ ogImage }}">{% endif %}
+{% if ogUrl %}<meta property="og:url" content="{{ ogUrl }}">{% elsif canonical %}<meta property="og:url" content="{{ canonical }}">{% endif %}
+
+<!-- Twitter Card -->
+<meta name="twitter:card"        content="{{ twitterCard | default:'summary' }}">
+<meta name="twitter:title"       content="{{ ogTitle | default:title }}">
+<meta name="twitter:description" content="{{ ogDescription | default:description }}">
+{% if ogImage %}<meta name="twitter:image" content="{{ ogImage }}">{% endif %}
+{% if twitterSite %}<meta name="twitter:site" content="{{ twitterSite }}">{% endif %}

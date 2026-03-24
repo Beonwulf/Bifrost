@@ -1,6 +1,7 @@
 import { Bifrost } from './Bifrost.js';
-import { Router } from '../routing/Router.js';
-import { Galdr }  from '../template/Galdr.js';
+import { Router }     from '../routing/Router.js';
+import { Galdr }      from '../template/Galdr.js';
+import { NavRegistry } from '../routing/NavRegistry.js';
 import { handler404, handler500 } from '../defaults/routes.js';
 
 /**
@@ -33,6 +34,7 @@ export class BifrostApp {
 		bodyParser:      false,
 		compression:     false,
 		responseHelpers: true,
+		locales:         null,
 	};
 
 	// ── Konfiguration (statische Setter) ──────────────────────────────────────
@@ -40,6 +42,17 @@ export class BifrostApp {
 	static setPort($port)    { BifrostApp.cfg.port = $port; }
 	static setHost($host)    { BifrostApp.cfg.host = $host; }
 	static setStatic($dir)   { BifrostApp.cfg.static = $dir; }
+
+	/**
+	 * Aktiviert Locale-Prefix-Routing. Bekannte Locale-Codes werden aus der URL
+	 * gestrippt und per req._locale an Controller weitergegeben.
+	 * Registriert die Locales zusätzlich in NavRegistry für den automatischen LangSwitch.
+	 * @param {string[]} $locales  z.B. ['de', 'en', 'fr', 'es', 'it']
+	 */
+	static setLocales($locales) {
+		BifrostApp.cfg.locales = $locales;
+		NavRegistry.setLocales($locales);
+	}
 
 	static enableSocket()          { BifrostApp.cfg.socket = true; }
 	static disableSocket()         { BifrostApp.cfg.socket = false; }
@@ -81,8 +94,7 @@ export class BifrostApp {
 		return this;
 	}
 
-	/**
-	 * Gibt den Error-Handler für den Statuscode zurück, oder den built-in Fallback.
+	/** Gibt den Error-Handler für den Statuscode zurück, oder den built-in Fallback.
 	 * @param {number} $status
 	 * @returns {Function}
 	 */
@@ -100,6 +112,19 @@ export class BifrostApp {
 
 	register($name, $service) { this.#services.set($name, $service); return this; }
 	service($name)            { return this.#services.get($name); }
+
+
+	// ── Navigation ───────────────────────────────────────────────────────────
+
+	/**
+	 * Gibt die sortierten Nav-Einträge einer Navigation zurück.
+	 * Einträge werden von Router::loadControllers via Controller::menu befüllt.
+	 * @param {string} $nav  Nav-Name (z.B. 'main', 'footer')
+	 * @returns {Array<{slug: string, lang: string, order: number}>}
+	 */
+	getNav($nav = 'main') {
+		return NavRegistry.getNav($nav);
+	}
 
 
 	// ── Getter ────────────────────────────────────────────────────────────────
@@ -162,6 +187,9 @@ export class BifrostApp {
 			sslCert:     cfg.sslCert,
 			compression: cfg.compression,
 		});
+
+		// Locale-Prefix-Routing konfigurieren
+		if (cfg.locales) this.#bifrost.setLocales(cfg.locales);
 
 		// Runen registrieren
 		if (cfg.responseHelpers) this.#bifrost.use(Bifrost.createResponseHelperRune());

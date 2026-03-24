@@ -20,6 +20,7 @@ export class Bifrost extends BifrostStatic {
 	#socketPath;
 	#compression;
 	#routes = [];
+	#locales = null;
 	#errorHandlers = new Map();
 
 
@@ -56,6 +57,17 @@ export class Bifrost extends BifrostStatic {
 	 */
 	setErrorHandler($status, $handler) {
 		this.#errorHandlers.set($status, $handler);
+		return this;
+	}
+
+	/**
+	 * Aktiviert Locale-Prefix-Routing (SEO-URLs).
+	 * Bekannte Locale-Codes werden vor dem Route-Matching aus der URL gestrippt
+	 * und als req._locale gesetzt. Beispiel: /de/about → req._locale='de', req.url='/about'
+	 * @param {string[]} $locales  z.B. ['de', 'en', 'fr', 'es', 'it']
+	 */
+	setLocales($locales) {
+		this.#locales = new Set(Array.isArray($locales) ? $locales : [$locales]);
 		return this;
 	}
 
@@ -151,6 +163,17 @@ export class Bifrost extends BifrostStatic {
 			return; // Socket.io übernimmt hier intern über den 'upgrade' listener
 		}
 
+
+		// --- Locale-Prefix-Stripping (SEO-URLs: /de/about → req._locale='de', /about) ---
+		if (this.#locales) {
+			const rawUrl = new URL(req.url, `https://${req.headers.host}`);
+			const m = rawUrl.pathname.match(/^\/([a-z]{2})(\/.*)?$/);
+			if (m && this.#locales.has(m[1])) {
+				req._locale = m[1];
+				const newPath = m[2] || '/';
+				req.url = newPath + (rawUrl.search || '');
+			}
+		}
 
 		// --- Routing Logik (Erweitert für Parameter :id) ---
 		const url = new URL(req.url, `https://${req.headers.host}`);

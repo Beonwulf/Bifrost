@@ -1,0 +1,18 @@
+<div class="dropdown" role="navigation" aria-label="Sprache wählen">
+	{% each _langSwitch %}{% if active %}
+	<button class="btn btn-ghost btn-sm" data-dropdown aria-haspopup="listbox" aria-expanded="false" aria-label="{{ ariaLabel }}">
+		<span class="flag flag--{{ flag }}"></span>
+		<span class="dropdown-arrow" aria-hidden="true">▾</span>
+	</button>
+	{% endif %}{% endeach %}
+	<ul class="dropdown-menu dropdown-menu--end" role="listbox">
+		{% each _langSwitch %}
+		<li role="option"{% if active %} aria-selected="true"{% endif %}>
+			<a href="{{ href }}" class="dropdown-item{% if active %} active{% endif %}" aria-label="{{ ariaLabel }}" hreflang="{{ code }}"{% if active %} aria-current="true"{% endif %}>
+				<span class="flag flag--{{ flag }}"></span>
+				<span>{{ label }}</span>
+			</a>
+		</li>
+		{% endeach %}
+	</ul>
+</div>

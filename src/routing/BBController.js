@@ -14,9 +14,14 @@
  *     }
  * }
  */
+import { I18n }         from '../i18n/I18n.js';
+import { NavRegistry }  from './NavRegistry.js';
 export class BBController {
 
 	// ── Static-API (vom Router ausgelesen) ────────────────────────────────────
+
+	/** Menu-Einträge für die Navigation (wird von NavRegistry ausgelesen). */
+	static menu = [];
 
 	/** HTTP-Pfad, z.B. '/:username/overlay' */
 	static path = '/';
@@ -47,6 +52,17 @@ export class BBController {
 	#res  = null;
 	#next = null;
 	#app  = null;
+
+	// ── SEO-Properties (in Subklassen überschreiben) ──────────────────────────
+
+	/** Seiten-Titel — wird als <title> und og:title verwendet */
+	title       = null;
+	/** Meta-Description */
+	description = '';
+	/** Komma-separierte Keywords */
+	keywords    = '';
+	/** robots-Direktive, z.B. 'noindex, nofollow' */
+	robots      = 'index, follow';
 
 	constructor($request, $response, $next = null, $app = null) {
 		this.#req  = $request;
@@ -95,6 +111,53 @@ export class BBController {
 	 * @param {number} $status    HTTP-Statuscode (default: 200)
 	 */
 	async render($template, $data = {}, $status = 200) {
+		// Auto-Inject: Roh-Daten aus Namespace(s) + Cookie-Persistenz bei URL-Locale
+		if (I18n.isConfigured()) {
+			const locale = this.locale;
+			// _ns aus $data lesen (z.B. _ns: ['common', 'about']); Fallback: 'common'
+			const ns     = Array.isArray($data._ns) ? $data._ns : ['common'];
+			const rawData = await I18n.getRaw(locale, ns);
+				const t     = 't' in $data ? $data.t : await this.i18n(ns);
+			const _path = this.req.url?.split('?')[0] || '/';
+
+			// Nav aus Registry aufbauen: sortiert, übersetzt, active-Flag gesetzt
+			const _nav = {};
+			for (const navName of NavRegistry.getNavNames()) {
+				_nav[navName] = NavRegistry.getNav(navName).map($entry => ({
+					slug:     $entry.slug,
+					label:    t($entry.lang),
+					external: !!$entry.external,
+					active:   !$entry.external && _path === $entry.slug,
+				}));
+			}
+
+			// LangSwitch aus konfigurierten Locales aufbauen
+			const _langSwitch = await NavRegistry.getLangSwitch(locale);
+
+			// SEO-Defaults — Priorität: $data > Instanz-Property > Fallback
+			const proto       = this.req.headers['x-forwarded-proto'] ?? 'http';
+			const host        = this.req.headers.host ?? 'localhost';
+			const seoDefaults = {
+				description: $data.description ?? this.description,
+				keywords:    $data.keywords    ?? this.keywords,
+				canonical:   $data.canonical   ?? `${proto}://${host}${_path}`,
+				robots:      $data.robots      ?? this.robots,
+				ogType:      $data.ogType      ?? 'website',
+				twitterCard: $data.twitterCard ?? 'summary',
+			};
+
+			$data = { year: new Date().getFullYear(), _path, _nav, _langSwitch, ...seoDefaults, ...rawData, ...$data, t, _locale: locale };
+			delete $data._ns;
+			// title: $data > Instanz-Property > page.title
+			if (!$data.title) $data.title = this.title ?? $data.page?.title ?? null;
+			// Locale aus URL-Präfix als Cookie persistieren
+			if (this.req._locale) {
+				this.res.setHeader(
+					'Set-Cookie',
+					`locale=${this.req._locale}; Path=/; Max-Age=31536000; SameSite=Lax`
+				);
+			}
+		}
 		const { Galdr } = await import('../template/Galdr.js');
 		const rendered  = await Galdr.render($template, $data);
 		this.html(rendered, $status);
@@ -111,6 +174,45 @@ export class BBController {
 	}
 
 
+	// ── I18n ─────────────────────────────────────────────────────────────────
+
+	/**
+	 * Ermittelt die Locale des aktuellen Requests.
+	 * Priorität: Cookie 'locale' → Accept-Language → Fallback-Locale aus I18n.configure()
+	 * @returns {string}  z.B. 'de'
+	 */
+	get locale() {
+		return I18n.detectLocale(this.#req);
+	}
+
+	/**
+	 * Lädt Übersetzungen und gibt eine Translator-Funktion zurück.
+	 * Shorthand für I18n.load(this.locale, namespaces).
+	 *
+	 * @param {string|string[]} $namespaces  z.B. ['common', 'home'] oder 'common'
+	 * @param {string}          [$locale]    Override; Default: this.locale
+	 * @returns {Promise<import('../i18n/I18n.js').TranslatorFn>}
+	 *
+	 * @example
+	 * async get() {
+	 *     const t = await this.i18n(['common', 'home']);
+	 *     this.render('home', { title: t('page.title'), t });
+	 * }
+	 */
+	async i18n($namespaces = ['common'], $locale = null) {
+		return I18n.load($locale ?? this.locale, $namespaces);
+	}
+
+	/**
+	 * Gibt die sortierten Nav-Einträge zurück (delegiert an App oder NavRegistry direkt).
+	 * @param {string} $nav  Nav-Name (default: 'main')
+	 * @returns {Array<{slug: string, lang: string, order: number}>}
+	 */
+	getNav($nav = 'main') {
+		return this.#app?.getNav($nav) ?? NavRegistry.getNav($nav);
+	}
+
+
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	/**
@@ -124,10 +226,25 @@ export class BBController {
 
 	// ── Method-Handler (zu überschreiben) ────────────────────────────────────
 
-	async get()    { this.next(); }
-	async post()   { this.next(); }
-	async put()    { this.next(); }
-	async patch()  { this.next(); }
-	async delete() { this.next(); }
+	/**
+	 * Gemeinsamer Handler für alle HTTP-Methoden.
+	 * Wird aufgerufen, wenn kein spezifischer Handler (get/post/...) überschrieben wurde.
+	 * Subklassen können handle() überschreiben, um GET + POST in einer Methode zu bedienen.
+	 *
+	 * @param {string} $method  HTTP-Methode in Kleinbuchstaben ('get', 'post', ...)
+	 *
+	 * @example
+	 * async handle($method) {
+	 *     const t = await this.i18n(['common', 'home']);
+	 *     await this.render('home', { t });
+	 * }
+	 */
+	async handle($method) { this.next(); }
+
+	async get()    { return this.handle('get'); }
+	async post()   { return this.handle('post'); }
+	async put()    { return this.handle('put'); }
+	async patch()  { return this.handle('patch'); }
+	async delete() { return this.handle('delete'); }
 
 }
