@@ -15,6 +15,11 @@
   - [each](#each)
   - [with](#with)
   - [layout](#layout)
+  - [include with](#include-with)
+  - [set](#set)
+  - [Kommentare](#kommentare)
+  - [Filter / Pipes](#filter--pipes)
+  - [Komponenten](#komponenten)
 - [Layouts & Partials erstellen](#layouts--partials-erstellen)
 - [Cache](#cache)
 - [Sicherheit](#sicherheit)
@@ -229,6 +234,154 @@ Mit dem `minimal`-Layout:
     </form>
 {% endlayout %}
 ```
+
+---
+
+### include with
+
+Bindet ein Partial mit optionalem eigenem Kontext ein:
+
+```html
+<!-- Kontext-Variable übergeben -->
+{% include "nav" with $myNav %}
+
+<!-- Inline-Objekt (Schlüssel aus äußerem Kontext sind zugänglich) -->
+{% include "nav" with { items: _nav.main, class: 'nav--dark' } %}
+
+<!-- Name aus Variable auflösen -->
+{% include partialName %}
+```
+
+Das eingebundene Template hat immer Zugriff auf den äußeren Kontext. Der `with`-Ausdruck fügt zusätzliche Schlüssel hinzu.
+
+---
+
+### set
+
+Definiert eine Variable im aktuellen Scope:
+
+```html
+{% set $label = 'Hallo' %}
+{% set $count = 42 %}
+{% set $active = true %}
+{% set $title = $page.title %}
+
+{{ $label }}  <!-- Hallo -->
+```
+
+Unterstützte Werttypen: Strings (`'…'` / `"…"`), Zahlen, Booleans, `null` und Kontext-Pfade.
+
+---
+
+### Kommentare
+
+```html
+{# Wird nicht gerendert #}
+{# TODO: Pagination #}
+{{ $wert }} {# Inline-Kommentar #}
+```
+
+Kommentare werden vor dem Rendern vollständig entfernt — kein HTML-Output.
+
+---
+
+### Filter / Pipes
+
+Filter transformieren einen Wert mit `|`:
+
+```html
+{{ $name | upper }}
+{{ $title | lower }}
+{{ $text | trim }}
+{{ $text | truncate:100 }}
+{{ $text | truncate:100:'…' }}
+{{ $bio | nl2br }}
+{{ $price | currency }}
+{{ $price | currency:',' }}
+{{ $ratio | number:2 }}
+{{ $value | default:'k.A.' }}
+{{ $obj | json }}
+```
+
+Filter sind verkettbar:
+
+```html
+{{ $title | trim | upper }}
+{{ $price | currency:',' | default:'—' }}
+```
+
+| Filter | Beschreibung |
+|---|---|
+| `upper` | Großbuchstaben |
+| `lower` | Kleinbuchstaben |
+| `trim` | Führende/nachgestellte Leerzeichen entfernen |
+| `truncate:N` | Auf N Zeichen kürzen |
+| `truncate:N:'…'` | Kürzen mit eigenem Suffix |
+| `nl2br` | Zeilenumbrüche → `<br>` |
+| `currency` | Zahl als Dezimalzahl (2 Stellen, `.`) |
+| `currency:','` | Wie currency, eigenes Dezimalzeichen |
+| `number:N` | N Dezimalstellen |
+| `default:'x'` | Fallback bei null / undefined / leer |
+| `json` | `JSON.stringify` (kein HTML-Escaping) |
+
+---
+
+### Komponenten
+
+Galdr unterstützt zwei Komponenten-Syntaxen.
+
+#### Custom Tags — `<x-name>`
+
+Einfache Leaf-Komponenten mit optionalem Slot-Inhalt:
+
+```html
+<!-- Selbst-schließend -->
+<x-spinner size="sm" ariaLabel="Lädt…" />
+
+<!-- Mit Slot-Inhalt -->
+<x-alert type="success">Gespeichert.</x-alert>
+<x-badge type="primary">NEU</x-badge>
+<x-card head="Titel"><p>Body-Text.</p></x-card>
+```
+
+Attribute werden als Template-Variablen in der Komponenten-Datei verfügbar. Der Tag-Inhalt steht als `{{{ slot }}}` (unescaped) bereit.
+
+#### Strukturierte Komponenten — `{% component %}`
+
+Für Layouts mit Named Slots:
+
+```html
+{% component "card" %}
+    {% slot head %}Karten-Titel{% endslot %}
+    {% slot body %}
+        {% each $items %}<p>{{ name }}</p>{% endeach %}
+    {% endslot %}
+    {% slot foot %}
+        <button class="btn btn-primary">Speichern</button>
+    {% endslot %}
+{% endcomponent %}
+```
+
+Innerhalb der Komponenten-Datei stehen Named Slots als `{{{ _slots.head }}}`, `{{{ _slots.body }}}`, `{{{ _slots.foot }}}` bereit. Mit `{% if _slots.foot %}` lässt sich prüfen, ob ein Slot befüllt wurde.
+
+#### Eigene Komponente erstellen
+
+```html
+<!-- views/partials/my-card.galdr.html -->
+<div class="card{% if class %} {{ class }}{% endif %}">
+    {% if _slots.head %}
+    <div class="card-header">{{{ _slots.head }}}</div>
+    {% elseif head %}
+    <div class="card-header">{{ head }}</div>
+    {% endif %}
+    <div class="card-body">{{{ slot }}}{{{ _slots.body }}}</div>
+    {% if _slots.foot %}
+    <div class="card-footer">{{{ _slots.foot }}}</div>
+    {% endif %}
+</div>
+```
+
+Komponenten-Dateien liegen in `views/partials/` — dasselbe Verzeichnis wie reguläre Partials. Eingebaute Komponenten (`alert`, `badge`, `spinner`, `card`) sind ohne Konfiguration verfügbar.
 
 ---
 

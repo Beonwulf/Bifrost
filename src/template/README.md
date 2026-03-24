@@ -15,6 +15,11 @@
   - [each](#each)
   - [with](#with)
   - [layout](#layout)
+  - [include with](#include-with)
+  - [set](#set)
+  - [Comments](#comments)
+  - [Filters / Pipes](#filters--pipes)
+  - [Components](#components)
 - [Creating Layouts & Partials](#creating-layouts--partials)
 - [Cache](#cache)
 - [Security](#security)
@@ -229,6 +234,154 @@ Using the `minimal` layout:
     </form>
 {% endlayout %}
 ```
+
+---
+
+### include with
+
+Includes a partial with an optional dedicated context:
+
+```html
+<!-- Pass a context variable -->
+{% include "nav" with $myNav %}
+
+<!-- Pass an inline object (keys from the outer context are accessible) -->
+{% include "nav" with { items: _nav.main, class: 'nav--dark' } %}
+
+<!-- Resolve name from a variable -->
+{% include partialName %}
+```
+
+The included template always has full access to the outer context. The `with` expression merges additional keys on top of it.
+
+---
+
+### set
+
+Defines a variable in the current scope:
+
+```html
+{% set $label = 'Hello' %}
+{% set $count = 42 %}
+{% set $active = true %}
+{% set $title = $page.title %}
+
+{{ $label }}  <!-- Hello -->
+```
+
+Supported value types: strings (`'…'` / `"…"`), numbers, booleans, `null`, and context paths.
+
+---
+
+### Comments
+
+```html
+{# This comment is not rendered #}
+{# TODO: add pagination #}
+{{ $value }} {# inline comment #}
+```
+
+Comments are removed before rendering — no HTML output.
+
+---
+
+### Filters / Pipes
+
+Filters transform a value with `|`:
+
+```html
+{{ $name | upper }}
+{{ $title | lower }}
+{{ $text | trim }}
+{{ $text | truncate:100 }}
+{{ $text | truncate:100:'…' }}
+{{ $bio | nl2br }}
+{{ $price | currency }}
+{{ $price | currency:',' }}
+{{ $ratio | number:2 }}
+{{ $value | default:'n/a' }}
+{{ $obj | json }}
+```
+
+Filters can be chained:
+
+```html
+{{ $title | trim | upper }}
+{{ $price | currency:',' | default:'—' }}
+```
+
+| Filter | Description |
+|---|---|
+| `upper` | Uppercase |
+| `lower` | Lowercase |
+| `trim` | Strip leading/trailing whitespace |
+| `truncate:N` | Shorten to N characters |
+| `truncate:N:'…'` | Shorten with custom suffix |
+| `nl2br` | Convert newlines to `<br>` |
+| `currency` | Format as decimal number (2 places, `.`) |
+| `currency:','` | Same, custom decimal separator |
+| `number:N` | N decimal places |
+| `default:'x'` | Fallback if null / undefined / empty |
+| `json` | `JSON.stringify` (no HTML-escaping) |
+
+---
+
+### Components
+
+Galdr supports two component syntaxes.
+
+#### Custom Tags — `<x-name>`
+
+Simple leaf components with optional slot content:
+
+```html
+<!-- Self-closing -->
+<x-spinner size="sm" ariaLabel="Loading…" />
+
+<!-- With slot content -->
+<x-alert type="success">Saved successfully.</x-alert>
+<x-badge type="primary">NEW</x-badge>
+<x-card head="Title"><p>Body text.</p></x-card>
+```
+
+Attributes become template variables inside the component file. The tag content is available as `{{{ slot }}}` (unescaped).
+
+#### Structural Components — `{% component %}`
+
+For layouts with named slots:
+
+```html
+{% component "card" %}
+    {% slot head %}Card Title{% endslot %}
+    {% slot body %}
+        {% each $items %}<p>{{ name }}</p>{% endeach %}
+    {% endslot %}
+    {% slot foot %}
+        <button class="btn btn-primary">Save</button>
+    {% endslot %}
+{% endcomponent %}
+```
+
+Inside the component template, named slots are available as `{{{ _slots.head }}}`, `{{{ _slots.body }}}`, `{{{ _slots.foot }}}`. Use `{% if _slots.foot %}` to check whether a slot was provided.
+
+#### Creating a component
+
+```html
+<!-- views/partials/my-card.galdr.html -->
+<div class="card{% if class %} {{ class }}{% endif %}">
+    {% if _slots.head %}
+    <div class="card-header">{{{ _slots.head }}}</div>
+    {% elseif head %}
+    <div class="card-header">{{ head }}</div>
+    {% endif %}
+    <div class="card-body">{{{ slot }}}{{{ _slots.body }}}</div>
+    {% if _slots.foot %}
+    <div class="card-footer">{{{ _slots.foot }}}</div>
+    {% endif %}
+</div>
+```
+
+Component files live in `views/partials/` — the same directory as regular partials. Built-in components (`alert`, `badge`, `spinner`, `card`) are always available without configuration.
 
 ---
 
