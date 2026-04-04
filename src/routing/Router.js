@@ -79,36 +79,39 @@ export class Router {
 				continue;
 			}
 
-			const controllerPath    = ControllerClass.path;
+			const paths = Array.isArray(ControllerClass.path) ? ControllerClass.path : [ControllerClass.path];
+			const primaryPath = paths[0];
 			const controllerMethods = ControllerClass.methods ?? ['get'];
 
-			for (const method of controllerMethods) {
-				if (typeof $bifrost[method] !== 'function') {
-					console.warn(`   ⚠️ Methode '${method}' nicht unterstützt (${file})`);
-					continue;
+			for (const controllerPath of paths) {
+				for (const method of controllerMethods) {
+					if (typeof $bifrost[method] !== 'function') {
+						console.warn(`   ⚠️ Methode '${method}' nicht unterstützt (${file})`);
+						continue;
+					}
+
+					$bifrostmethod => {
+						const ctrl = new ControllerClass($req, $res, null, $app);
+
+						// paramCb ausführen wenn vorhanden
+						if (ControllerClass.paramName && typeof ControllerClass.paramCb === 'function') {
+							const paramValue = $req.params?.[ControllerClass.paramName];
+							await ControllerClass.paramCb(paramValue, $req);
+						}
+
+						// Lifecycle: prepare (z.B. Auth-Check)
+						const proceed = await ctrl.prepare();
+						if (proceed === false || $res.writableEnded) return;
+
+						// Method-Dispatch
+						const handler = ctrl[method];
+						if (typeof handler === 'function') {
+							await handler.call(ctrl);
+						}
+					});
+
+					console.log(`   ✅ ${method.toUpperCase()} ${controllerPath} → ${ControllerClass.name}`);
 				}
-
-				$bifrost[method](controllerPath, async ($req, $res) => {
-					const ctrl = new ControllerClass($req, $res, null, $app);
-
-					// paramCb ausführen wenn vorhanden
-					if (ControllerClass.paramName && typeof ControllerClass.paramCb === 'function') {
-						const paramValue = $req.params?.[ControllerClass.paramName];
-						await ControllerClass.paramCb(paramValue, $req);
-					}
-
-					// Lifecycle: prepare (z.B. Auth-Check)
-					const proceed = await ctrl.prepare();
-					if (proceed === false || $res.writableEnded) return;
-
-					// Method-Dispatch
-					const handler = ctrl[method];
-					if (typeof handler === 'function') {
-						await handler.call(ctrl);
-					}
-				});
-
-				console.log(`   ✅ ${method.toUpperCase()} ${controllerPath} → ${ControllerClass.name}`);
 			}
 
 			// Menu-Einträge in NavRegistry registrieren
@@ -116,7 +119,7 @@ export class Router {
 				for (const entry of ControllerClass.menu) {
 					const { lang, ...navKeys } = entry;
 					for (const [$nav, order] of Object.entries(navKeys)) {
-						NavRegistry.register($nav, { slug: controllerPath, lang, order });
+						NavRegistry.register($nav, { slug: primaryPath, lang, order });
 					}
 				}
 			}

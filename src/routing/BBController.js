@@ -23,7 +23,7 @@ export class BBController {
 	/** Menu-Einträge für die Navigation (wird von NavRegistry ausgelesen). */
 	static menu = [];
 
-	/** HTTP-Pfad, z.B. '/:username/overlay' */
+	/** HTTP-Pfad oder Array von Pfaden, z.B. '/:username/overlay', ['/login', '/anmelden'] oder '/api/*' */
 	static path = '/';
 
 	/** HTTP-Methoden, die dieser Controller bedient */

@@ -95,18 +95,32 @@ export class Bifrost extends BifrostStatic {
 	#addRoute(method, $path, $handler) {
 		const route = { method, path: $path, handler: $handler };
 
-		// Parametrische Routen (:param) einmalig in RegExp übersetzen
-		if ($path.includes(':')) {
+		// Parametrische (:param) oder Wildcard (*) Routen einmalig in RegExp übersetzen
+		if ($path.includes(':') || $path.includes('*')) {
 			const paramNames = [];
-			const pattern = $path.replace(/:([^/]+)/g, ($_, $name) => {
+			let pattern = $path.replace(/:([^/]+)/g, ($_, $name) => {
 				paramNames.push($name);
 				return '([^/]+)';
 			});
+
+			let wildcardCount = 0;
+			pattern = pattern.replace(/\*/g, () => {
+				paramNames.push(`wildcard_${wildcardCount++}`);
+				return '(.*)';
+			});
+
 			route.regex      = new RegExp(`^${pattern}$`);
 			route.paramNames = paramNames;
 		}
 
 		this.#routes.push(route);
+
+		// Sortieren: Wildcard-Routen (*) immer ans Ende der Liste schieben.
+		this.#routes.sort((a, b) => {
+			const aWild = a.path.includes('*') ? 1 : 0;
+			const bWild = b.path.includes('*') ? 1 : 0;
+			return aWild - bWild;
+		});
 	}
 
 

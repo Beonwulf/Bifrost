@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Dynamische Meta-Tags aus dem Controller -->
+    <title>{{ $title }}</title>
+    <meta name="description" content="{{ $description }}">
+    
+    <!-- Open Graph (für schicke Previews auf Social Media, WhatsApp, etc.) -->
+    <meta property="og:title" content="{{ $title }}">
+    <meta property="og:description" content="{{ $description }}">
+    <meta property="og:type" content="{{ $ogType }}">
+    
+    <!-- BBController generiert praktischerweise schon eine Canonical URL für uns -->
+    <link rel="canonical" href="{{ $canonical }}">
+
+    <!-- Hier lädst du deine tatsächliche Frontend-App (React, Vue, Svelte...) -->
+    <script type="module" src="/assets/main.js"></script>
+</head>
+<body>
+    <!-- Root-Container für dein Frontend-Framework -->
+    <div id="app"></div>
+</body>
+</html>
