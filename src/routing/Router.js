@@ -90,7 +90,7 @@ export class Router {
 						continue;
 					}
 
-					$bifrostmethod => {
+					$bifrost[method](controllerPath, async ($req, $res) => {
 						const ctrl = new ControllerClass($req, $res, null, $app);
 
 						// paramCb ausführen wenn vorhanden
