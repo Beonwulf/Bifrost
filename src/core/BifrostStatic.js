@@ -267,5 +267,41 @@ export class BifrostStatic {
 		};
 	}
 
+	/**
+	 * AuthRune — Middleware zur Authentifizierung
+	 *
+	 * Liest den Token (Cookie oder Header) aus, validiert ihn über einen Auth-Service
+	 * und setzt `req.user`, woraufhin `BBController.isAuthenticated` funktioniert.
+	 */
+	static createAuthRune($app) {
+		return async (req, res, next) => {
+			// 1. Token aus Header oder Cookie extrahieren
+			let token = null;
+			const authHeader = req.headers.authorization;
+			if (authHeader && authHeader.startsWith('Bearer ')) {
+				token = authHeader.substring(7);
+			} else if (req.headers.cookie) {
+				const match = req.headers.cookie.match(/(^| )auth_token=([^;]+)/);
+				if (match) token = decodeURIComponent(match[2]);
+			}
+
+			// 2. Token validieren und req.user setzen
+			if (token) {
+				try {
+					const authService = $app.service('auth');
+					if (!authService) {
+						throw new Error('AuthService ist nicht in der App registriert!');
+					}
+					// verify() wirft einen Fehler, wenn abgelaufen oder manipuliert
+					req.user = authService.verify(token);
+				} catch (err) {
+					console.error('Auth-Fehler:', err.message);
+					req.user = null;
+				}
+			}
+
+			await next();
+		};
+	}
 
 }

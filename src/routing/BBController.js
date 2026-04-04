@@ -294,6 +294,31 @@ export class BBController {
 	}
 
 	/**
+	 * Prüft rein strukturell, ob das aktuelle Token das Format eines JWT hat (Header.Payload.Signature).
+	 */
+	get isJWT() {
+		const t = this.token;
+		if (!t) return false;
+		return /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/.test(t);
+	}
+
+	/**
+	 * Dekodiert den Payload des JWTs (ACHTUNG: Ohne Signatur-Prüfung!).
+	 * Nützlich, um z.B. Ablaufdaten (exp) oder Metadaten auszulesen, bevor verifiziert wird.
+	 */
+	get jwtPayload() {
+		if (!this.isJWT) return null;
+		try {
+			const base64Url = this.token.split('.')[1];
+			const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+			const jsonPayload = Buffer.from(base64, 'base64').toString('utf-8');
+			return JSON.parse(jsonPayload);
+		} catch (err) {
+			return null;
+		}
+	}
+
+	/**
 	 * Gibt den aktiven User zurück (wird idealerweise von einer Auth-Rune gesetzt)
 	 */
 	get user() {
@@ -305,6 +330,45 @@ export class BBController {
 	 */
 	get isAuthenticated() {
 		return !!this.user;
+	}
+
+	// ── Guards ───────────────────────────────────────────────────────────────
+
+	/**
+	 * Guard: Prüft, ob ein User eingeloggt ist. Wenn nicht, erfolgt ein Redirect.
+	 * Räumt automatisch ungültige Session-Cookies auf.
+	 * 
+	 * @param {string} $redirectUrl URL für den Redirect (default: '/login')
+	 * @returns {boolean} true wenn eingeloggt, false wenn nicht (bricht Dispatch ab)
+	 */
+	requireAuth($redirectUrl = '/login') {
+		if (!this.isAuthenticated) {
+			// Fallback: Wenn ein Token-Cookie da ist, aber ungültig war, räumen wir auf.
+			if (this.getCookie('auth_token')) {
+				this.setCookie('auth_token', '', { maxAge: -1, path: '/' });
+			}
+			this.redirect($redirectUrl);
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Guard: Prüft, ob der eingeloggte User eine bestimmte Rolle besitzt.
+	 * 
+	 * @param {string|string[]} $roles Erlaubte Rolle(n) (z.B. 'admin' oder ['admin', 'editor'])
+	 * @param {string} $redirectUrl URL für den Redirect bei fehlenden Rechten
+	 * @returns {boolean}
+	 */
+	requireRole($roles, $redirectUrl = '/login') {
+		if (!this.requireAuth($redirectUrl)) return false;
+		
+		const roles = Array.isArray($roles) ? $roles : [$roles];
+		if (!this.user?.role || !roles.includes(this.user.role)) {
+			this.redirect($redirectUrl);
+			return false;
+		}
+		return true;
 	}
 
 }
