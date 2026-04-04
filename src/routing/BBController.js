@@ -250,4 +250,61 @@ export class BBController {
 	async patch()  { return this.handle('patch'); }
 	async delete() { return this.handle('delete'); }
 
+	/**
+	 * Liest einen Cookie-Wert anhand des Namens aus.
+	 */
+	getCookie(name) {
+		const cookies = this.req.headers.cookie;
+		if (!cookies) return null;
+		const match = cookies.match(new RegExp('(^| )' + name + '=([^;]+)'));
+		return match ? decodeURIComponent(match[2]) : null;
+	}
+
+	/**
+	 * Setzt einen Cookie sicher und fügt ihn den bestehenden Headern hinzu.
+	 */
+	setCookie(name, value, options = {}) {
+		let cookieStr = `${name}=${encodeURIComponent(value)}; Path=${options.path || '/'}`;
+		if (options.maxAge) cookieStr += `; Max-Age=${options.maxAge}`;
+		if (options.httpOnly) cookieStr += `; HttpOnly`;
+		if (options.secure) cookieStr += `; Secure`;
+		if (options.sameSite) cookieStr += `; SameSite=${options.sameSite}`;
+
+		let existing = this.res.getHeader('Set-Cookie');
+		let cookies = [];
+		if (existing) {
+			cookies = Array.isArray(existing) ? existing : [existing];
+		}
+		cookies.push(cookieStr);
+		
+		this.res.setHeader('Set-Cookie', cookies);
+	}
+
+	/**
+	 * Holt das Token primär aus dem Authorization-Header, 
+	 * oder fallbacksweise aus einem Cookie.
+	 */
+	get token() {
+		const authHeader = this.req.headers.authorization;
+		if (authHeader && authHeader.startsWith('Bearer ')) {
+			return authHeader.substring(7);
+		}
+		// Fallback für Web-Sessions (z.B. Adminpanel)
+		return this.getCookie('auth_token');
+	}
+
+	/**
+	 * Gibt den aktiven User zurück (wird idealerweise von einer Auth-Rune gesetzt)
+	 */
+	get user() {
+		return this.req.user || null;
+	}
+
+	/**
+	 * Hilfsmethode zur Überprüfung, ob ein User eingeloggt ist.
+	 */
+	get isAuthenticated() {
+		return !!this.user;
+	}
+
 }

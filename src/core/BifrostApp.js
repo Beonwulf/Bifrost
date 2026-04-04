@@ -64,6 +64,7 @@ export class BifrostApp {
 	static disableCompression()    { BifrostApp.cfg.compression = false; }
 	static enableResponseHelpers() { BifrostApp.cfg.responseHelpers = true; }
 	static disableResponseHelpers(){ BifrostApp.cfg.responseHelpers = false; }
+	static enableSecurityHeaders($options = {}) { BifrostApp.cfg.securityHeaders = $options; }
 	static enableSSL($key, $cert)  {
 		BifrostApp.cfg.ssl = true;
 		if ($key && $cert) BifrostApp.cfg.sslCert = { key: $key, cert: $cert };
