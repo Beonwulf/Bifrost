@@ -48,6 +48,7 @@ await app.run();
   - [Functional routes](#functional-routes)
   - [BBController](#bbcontroller)
 - [Middleware (Runes)](#middleware-runes)
+- [File Uploads](#file-uploads)
 - [CORS](#cors)
 - [WebSockets](#websockets)
 - [SSL / HTTPS](#ssl--https)
@@ -89,7 +90,7 @@ const { app, bifrost, io, router } = await app.startup({
     ssl:             false,
     socket:          false,
     static:          'public',   // folder for static files
-    bodyParser:      true,
+    bodyParser:      { maxBytes: 10 * 1024 * 1024 }, // JSON & File uploads (10 MB Limit)
     cors:            true,       // Enable standard CORS
     sessions:        { duration: 3600 }, // In-Memory Sessions
     logging:         { level: 'info', file: true }, // File logger
@@ -266,8 +267,9 @@ bifrost.use(async ($req, $res, $next) => {
 // Supports ETag + 304 Not Modified out of the box
 bifrost.use(Bifrost.createStaticRune('public'));
 
-// Parse JSON body (POST/PUT/PATCH) → req.body
-// Optional: { maxBytes: 2 * 1024 * 1024 } (default: 1 MB)
+// Parse JSON body (POST/PUT/PATCH) → req.body,
+// and Multipart Form-Data (files) → req.files
+// Optional: { maxBytes: 10 * 1024 * 1024 } (default: 1 MB)
 bifrost.use(Bifrost.createBodyParserRune());
 
 // Add res.json() and res.error()
@@ -299,6 +301,28 @@ bifrost.use(Bifrost.createRateLimitRune({ points: 100, duration: 60, trustProxy:
 | `createCorsRune` | `Access-Control-Allow-*`, `Access-Control-Expose-Headers` |
 | `createSecurityHeadersRune` | `CSP`, `HSTS`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` |
 | `createRateLimitRune` | `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` |
+
+---
+
+## File Uploads
+
+Bifröst can parse `multipart/form-data` directly — no external dependencies like Multer needed.
+
+```js
+// Enable in app startup (e.g. with 50 MB limit)
+await app.startup({ bodyParser: { maxBytes: 50 * 1024 * 1024 } });
+```
+
+In your controller, you can comfortably access `this.files`. Each file is a raw Node.js Buffer object (`{ filename, mimetype, size, data }`):
+```js
+async post() {
+    const { avatar } = this.files;
+    if (avatar) {
+        await fs.promises.writeFile(`./uploads/${avatar.filename}`, avatar.data);
+        this.json({ success: true });
+    }
+}
+```
 
 ---
 

@@ -74,6 +74,7 @@ export class BBController {
 		this.params = $request.params ?? {};
 		this.url    = new URL($request.url, `http://${$request.headers.host}`);
 		this.body   = $request.body ?? null;
+		this.files  = $request.files ?? {};
 	}
 
 

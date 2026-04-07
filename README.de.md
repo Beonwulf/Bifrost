@@ -46,6 +46,7 @@ await app.run();
   - [Funktionale Routen](#funktionale-routen)
   - [BBController](#bbcontroller)
 - [Middleware (Runen)](#middleware-runen)
+- [Datei-Uploads](#datei-uploads)
 - [CORS](#cors)
 - [WebSockets](#websockets)
 - [SSL / HTTPS](#ssl--https)
@@ -263,8 +264,9 @@ bifrost.use(async ($req, $res, $next) => {
 // Unterstützt ETag + 304 Not Modified automatisch
 bifrost.use(Bifrost.createStaticRune('public'));
 
-// JSON-Body parsen (POST/PUT/PATCH) → req.body
-// Optional: { maxBytes: 2 * 1024 * 1024 } (Standard: 1 MB)
+// JSON-Body parsen (POST/PUT/PATCH) → req.body,
+// sowie Multipart Form-Data (Dateien) → req.files
+// Optional: { maxBytes: 10 * 1024 * 1024 } (Standard: 1 MB)
 bifrost.use(Bifrost.createBodyParserRune());
 
 // res.json() und res.error() hinzufügen
@@ -296,6 +298,28 @@ bifrost.use(Bifrost.createRateLimitRune({ points: 100, duration: 60, trustProxy:
 | `createCorsRune` | `Access-Control-Allow-*`, `Access-Control-Expose-Headers` |
 | `createSecurityHeadersRune` | `CSP`, `HSTS`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` |
 | `createRateLimitRune` | `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` |
+
+---
+
+## Datei-Uploads
+
+Bifröst kann `multipart/form-data` direkt verarbeiten – ohne externe Abhängigkeiten wie Multer.
+
+```js
+// In der App aktivieren (z.B. mit 50 MB Limit)
+await app.startup({ bodyParser: { maxBytes: 50 * 1024 * 1024 } });
+```
+
+Im Controller hast du bequemen Zugriff auf `this.files`. Jede Datei ist ein pures Node.js Buffer-Objekt (`{ filename, mimetype, size, data }`):
+```js
+async post() {
+    const { avatar } = this.files;
+    if (avatar) {
+        await fs.promises.writeFile(`./uploads/${avatar.filename}`, avatar.data);
+        this.json({ success: true });
+    }
+}
+```
 
 ---
 

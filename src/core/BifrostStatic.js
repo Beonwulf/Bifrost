@@ -208,30 +208,82 @@ export class BifrostStatic {
 
 	static createBodyParserRune($options = {}) {
 		const maxBytes = $options.maxBytes ?? MAX_BODY_BYTES;
-		return async (req, res, next) => {
-			if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+		return async ($req, $res, $next) => {
+			if (['POST', 'PUT', 'PATCH'].includes($req.method)) {
 				const chunks = [];
 				let bytes    = 0;
-				for await (const chunk of req) {
+				for await (const chunk of $req) {
 					bytes += chunk.length;
 					if (bytes > maxBytes) {
-						res.writeHead(413, { 'Content-Type': 'application/json' });
-						res.end(JSON.stringify({ error: 'Payload Too Large' }));
+						$res.writeHead(413, { 'Content-Type': 'application/json' });
+						$res.end(JSON.stringify({ error: 'Payload Too Large' }));
 						return;
 					}
 					chunks.push(chunk);
 				}
-				const body = Buffer.concat(chunks).toString('utf-8');
-				const ct = req.headers['content-type'] ?? '';
+				
+				const rawBuffer = Buffer.concat(chunks);
+				const ct = $req.headers['content-type'] ?? '';
+				
+				$req.body = {};
+				$req.files = {};
+
 				if (ct.includes('application/json')) {
-					try { req.body = JSON.parse(body); } catch { req.body = null; }
+					try { $req.body = JSON.parse(rawBuffer.toString('utf-8')); } catch { $req.body = null; }
+				} else if (ct.includes('multipart/form-data')) {
+					// Eigener Zero-Dependency Multipart-Parser
+					const match = ct.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+					if (match) {
+						const boundary = match[1] || match[2];
+						const boundaryBuffer = Buffer.from(`--${boundary}`);
+						const doubleCrlf = Buffer.from('\r\n\r\n');
+						
+						const parts = [];
+						let offset = 0;
+						let index = rawBuffer.indexOf(boundaryBuffer, offset);
+						while (index !== -1) {
+							parts.push(rawBuffer.subarray(offset, index));
+							offset = index + boundaryBuffer.length;
+							index = rawBuffer.indexOf(boundaryBuffer, offset);
+						}
+						parts.push(rawBuffer.subarray(offset));
+
+						for (const part of parts) {
+							let start = 0;
+							let end = part.length;
+							if (part[start] === 13 && part[start+1] === 10) start += 2;
+							if (part[end-2] === 13 && part[end-1] === 10) end -= 2;
+							if (start >= end) continue;
+							if (part[start] === 45 && part[start+1] === 45) continue; // -- EOF Marker
+
+							const slice = part.subarray(start, end);
+							const headerEnd = slice.indexOf(doubleCrlf);
+							if (headerEnd === -1) continue;
+
+							const headerText = slice.subarray(0, headerEnd).toString('utf-8');
+							const dataBuffer = slice.subarray(headerEnd + 4);
+
+							const dispMatch = headerText.match(/Content-Disposition:\s*form-data;\s*name="([^"]+)"(?:;\s*filename="([^"]*)")?/i);
+							if (!dispMatch) continue;
+
+							const fieldName = dispMatch[1];
+							const fileName = dispMatch[2];
+
+							if (fileName !== undefined) {
+								const typeMatch = headerText.match(/Content-Type:\s*([^\r\n]+)/i);
+								const fileObj = { filename: fileName, mimetype: typeMatch ? typeMatch[1].trim() : 'application/octet-stream', data: dataBuffer, size: dataBuffer.length };
+								if ($req.files[fieldName]) { if (!Array.isArray($req.files[fieldName])) $req.files[fieldName] = [$req.files[fieldName]]; $req.files[fieldName].push(fileObj); } else $req.files[fieldName] = fileObj;
+							} else {
+								const val = dataBuffer.toString('utf-8');
+								if ($req.body[fieldName]) { if (!Array.isArray($req.body[fieldName])) $req.body[fieldName] = [$req.body[fieldName]]; $req.body[fieldName].push(val); } else $req.body[fieldName] = val;
+							}
+						}
+					}
 				} else {
-					req.body = body; // Roh durchreichen (z.B. form-urlencoded)
+					$req.body = rawBuffer.toString('utf-8'); // form-urlencoded oder raw
 				}
 			}
-
-			// Weiter zur nächsten Rune
-			await next();
+			await $next();
 		};
 	}
 

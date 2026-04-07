@@ -62,10 +62,12 @@ res.error(message, status = 400)
 
 ### bodyParser
 
-Collects the request body and parses it as JSON.
+Collects the request body and parses it as JSON or `multipart/form-data`.
 
 ```js
-await app.startup({ bodyParser: true }); // default: false
+await app.startup({ 
+    bodyParser: { maxBytes: 10 * 1024 * 1024 } // 10 MB limit
+}); // default: false (1 MB limit when true)
 ```
 
 After this Rune runs, `req.body` contains the parsed object. Malformed JSON results in `{}`.

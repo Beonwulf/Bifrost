@@ -62,8 +62,8 @@ export class BifrostApp {
 
 	static enableSocket()          { BifrostApp.cfg.socket = true; }
 	static disableSocket()         { BifrostApp.cfg.socket = false; }
-	static enableBodyParser()      { BifrostApp.cfg.bodyParser = true; }
-	static disableBodyParser()     { BifrostApp.cfg.bodyParser = false; }
+	static enableBodyParser($options = true) { BifrostApp.cfg.bodyParser = $options; }
+	static disableBodyParser()               { BifrostApp.cfg.bodyParser = false; }
 	static enableCompression()     { BifrostApp.cfg.compression = true; }
 	static disableCompression()    { BifrostApp.cfg.compression = false; }
 	static enableResponseHelpers() { BifrostApp.cfg.responseHelpers = true; }
@@ -222,7 +222,9 @@ export class BifrostApp {
 			typeof cfg.sessions === 'object' ? cfg.sessions : {}
 		));
 		if (cfg.responseHelpers) this.#bifrost.use(Bifrost.createResponseHelperRune());
-		if (cfg.bodyParser)      this.#bifrost.use(Bifrost.createBodyParserRune());
+		if (cfg.bodyParser)      this.#bifrost.use(Bifrost.createBodyParserRune(
+			typeof cfg.bodyParser === 'object' ? cfg.bodyParser : {}
+		));
 		if (cfg.static)          this.#bifrost.use(Bifrost.createStaticRune(cfg.static));
 
 		// Socket.io

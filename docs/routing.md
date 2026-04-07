@@ -95,6 +95,7 @@ export default class UserController extends BBController {
 | `this.params` | URL parameters object, e.g. `{ id: '42' }` |
 | `this.url` | `URL` instance of the current request |
 | `this.body` | Parsed JSON body (requires `bodyParser: true`) |
+| `this.files` | Uploaded files via multipart/form-data (requires `bodyParser: true`) |
 | `this.req` | Raw `IncomingMessage` |
 | `this.res` | Raw `ServerResponse` |
 | `this.app` | `BifrostApp` instance |
@@ -217,7 +218,7 @@ const page = this.url.searchParams.get('page') ?? '1';
 Enable `bodyParser: true` in `startup()` to parse `POST`/`PUT`/`PATCH` JSON bodies:
 
 ```js
-await app.startup({ bodyParser: true });
+await app.startup({ bodyParser: { maxBytes: 10 * 1024 * 1024 } });
 ```
 
 The parsed object is available on `req.body` (functional routes) or `this.body` (BBController). Non-JSON bodies result in `{}`.
