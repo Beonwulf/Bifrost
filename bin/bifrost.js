@@ -2123,6 +2123,7 @@ await app.startup({
 	bodyParser:      true,
 	responseHelpers: true,
 	securityHeaders: true,
+	liveReload:      true, // Auto-Refresh bei Änderungen (node --watch)
 	rateLimit:       { points: 100, duration: 60 }, // trustProxy: true hinter nginx/Caddy
 });
 

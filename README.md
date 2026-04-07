@@ -96,6 +96,7 @@ const { app, bifrost, io, router } = await app.startup({
     bodyParser:      { maxBytes: 10 * 1024 * 1024 }, // JSON & File uploads (10 MB Limit)
     cors:            true,       // Enable standard CORS
     sessions:        { duration: 3600 }, // In-Memory Sessions
+        liveReload:      true,       // Enable hot-reload in dev mode
     logging:         { level: 'info', file: true }, // File logger
     compression:     false,
     responseHelpers: true,       // res.json() / res.error()

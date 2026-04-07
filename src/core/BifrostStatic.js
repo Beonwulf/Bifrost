@@ -205,6 +205,59 @@ export class BifrostStatic {
 		};
 	}
 
+	/**
+	 * Live-Reload-Rune — injiziert im Development-Modus ein Socket.io Skript in HTML-Responses.
+	 * Lädt die Seite automatisch neu, sobald der Node-Server (z.B. durch node --watch) neustartet.
+	 */
+	static createLiveReloadRune() {
+		return async (req, res, next) => {
+			// Nur bei normalen GET-Requests anwenden (keine APIs oder Assets)
+			if (req.method !== 'GET' || req.url.startsWith('/api') || req.url.startsWith('/socket.io')) {
+				return await next();
+			}
+
+			const originalWriteHead = res.writeHead;
+			const originalEnd = res.end;
+			let isHtml = false;
+
+			res.writeHead = function(...args) {
+				const headers = args.length > 1 && typeof args[args.length - 1] === 'object' ? args[args.length - 1] : {};
+				const ct = headers['Content-Type'] || res.getHeader('Content-Type');
+				
+				if (typeof ct === 'string' && ct.includes('text/html')) {
+					isHtml = true;
+					res.removeHeader('Content-Length'); // Content-Length löschen, da wir das Skript anhängen
+					if (headers['Content-Length']) delete headers['Content-Length'];
+				}
+				return originalWriteHead.apply(this, args);
+			};
+
+			res.end = function(chunk, encoding, callback) {
+				const ct = res.getHeader('Content-Type');
+				if (!isHtml && typeof ct === 'string' && ct.includes('text/html')) {
+					isHtml = true;
+					res.removeHeader('Content-Length');
+				}
+
+				if (isHtml) {
+					const script = `\n<!-- Bifröst Live-Reload -->\n<script src="/socket.io/socket.io.js"></script>\n<script>const _brio = io(); let _brfc = true; _brio.on('connect', () => { if(!_brfc) window.location.reload(); _brfc = false; });</script>\n`;
+					if (chunk) {
+						let body = Buffer.isBuffer(chunk) ? chunk.toString('utf8') : chunk;
+						if (typeof body === 'string') {
+							if (body.includes('</body>')) body = body.replace('</body>', `${script}</body>`);
+							else body += script;
+							chunk = Buffer.isBuffer(chunk) ? Buffer.from(body, 'utf8') : body;
+						}
+					} else {
+						chunk = script;
+					}
+				}
+				return originalEnd.call(this, chunk, encoding, callback);
+			};
+
+			await next();
+		};
+	}
 
 	static createBodyParserRune($options = {}) {
 		const maxBytes = $options.maxBytes ?? MAX_BODY_BYTES;

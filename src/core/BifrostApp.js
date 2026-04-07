@@ -41,6 +41,7 @@ export class BifrostApp {
 		rateLimit:       false, // true oder { points, duration, trustProxy } übergeben
 		sessions:        false, // true oder Options-Objekt { name, duration, secure } übergeben
 		csrf:            false, // true oder Options-Objekt { ignore: ['/api'] } übergeben
+		liveReload:      false, // Hot-Reload via Socket.io im Dev-Modus
 		logging:         { level: 'info', file: false }, // Logger Defaults
 	};
 
@@ -73,6 +74,7 @@ export class BifrostApp {
 	static enableCors($options = {})     { BifrostApp.cfg.cors = $options; }
 	static enableSessions($options = {}) { BifrostApp.cfg.sessions = $options; }
 	static enableCsrf($options = {})     { BifrostApp.cfg.csrf = $options; }
+	static enableLiveReload()            { BifrostApp.cfg.liveReload = true; }
 	static enableLogging($options = {})  { BifrostApp.cfg.logging = { ...BifrostApp.cfg.logging, ...$options }; }
 	static enableSSL($key, $cert)  {
 		BifrostApp.cfg.ssl = true;
@@ -210,6 +212,10 @@ export class BifrostApp {
 		// Runen registrieren — Reihenfolge: Logger → Security → CORS → RateLimit → ResponseHelpers → Body → Static
 		if (cfg.logging) {
 			this.#bifrost.use(Bifrost.createLoggerRune(this.#log));
+		}
+		if (cfg.liveReload && process.env.NODE_ENV !== 'production') {
+			cfg.socket = true; // Zwingend für den Client-Refresh benötigt
+			this.#bifrost.use(Bifrost.createLiveReloadRune());
 		}
 		if (cfg.securityHeaders) this.#bifrost.use(Bifrost.createSecurityHeadersRune(
 			typeof cfg.securityHeaders === 'object' ? cfg.securityHeaders : {}

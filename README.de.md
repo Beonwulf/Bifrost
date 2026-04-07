@@ -94,6 +94,7 @@ const { app, bifrost, io, router } = await app.startup({
         cors:            true,       // Standard-CORS aktivieren
     compression:     false,
         sessions:        { duration: 3600 }, // In-Memory Sessions aktivieren
+        liveReload:      true,       // Hot-Reload im Dev-Modus aktivieren
         logging:         { level: 'info', file: true, maxDays: 30 }, // Rotierendes File-Logging
     responseHelpers: true,       // res.json() / res.error()
 });

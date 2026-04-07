@@ -5,6 +5,11 @@ Alle bemerkenswerten Änderungen an diesem Projekt werden in dieser Datei dokume
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 und dieses Projekt folgt dem [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-04-07
+
+### Hinzugefügt (Added)
+- **Live-Reload (Hot-Reload)**: Neue Rune `createLiveReloadRune`, die im Development-Modus (`NODE_ENV !== 'production'`) automatisch die HTML-Seite neu lädt, sobald der Node.js Server (z. B. durch `node --watch`) neustartet. Aktivierbar via `app.startup({ liveReload: true })`.
+
 ## [0.17.0] - 2026-04-07
 
 ### Hinzugefügt (Added)
