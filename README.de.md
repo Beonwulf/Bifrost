@@ -55,6 +55,7 @@ await app.run();
 - [SSL / HTTPS](#ssl--https)
 - [Logging](#logging)
 - [API Testing (app.inject)](#api-testing-appinject)
+- [CacheService](#cacheservice)
 - [Template Engine — Galdr](./src/template/README.de.md)
 - [Service-Registry](#service-registry)
 - [Fehlerbehandlung](#fehlerbehandlung)
@@ -599,6 +600,31 @@ test('User API', async () => {
     assert.strictEqual(response.statusCode, 200);
     assert.strictEqual(response.json().success, true);
 });
+```
+
+---
+
+## CacheService
+
+Bifröst bringt einen globalen In-Memory Cache mit, der besonders nützlich ist, um teure Datenbankabfragen oder API-Calls mit einer Time-to-Live (TTL) zwischenzuspeichern.
+
+```js
+import { BBController, CacheService } from 'bifrost';
+
+export default class StatsController extends BBController {
+    static path = '/api/stats';
+    static methods = ['get'];
+
+    async get() {
+        // Holt die Daten aus dem RAM. Wenn sie nicht existieren oder abgelaufen sind,
+        // wird die Callback-Funktion ausgeführt und das Ergebnis für 600 Sekunden (10 Min) gespeichert.
+        const stats = await CacheService.remember('dashboard_stats', 600, async () => {
+            return await this.app.db.calculateHeavyStats();
+        });
+        
+        this.json(stats);
+    }
+}
 ```
 
 ---

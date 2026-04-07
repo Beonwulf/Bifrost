@@ -16,4 +16,5 @@ export { Galdr, BUILTIN_TEMPLATES }      from './src/template/Galdr.js';
 export { I18n }                          from './src/i18n/I18n.js';
 export { AuthService, TokenExpiredError, TokenInvalidError } from './src/core/AuthService.js';
 export { Logger }                        from './src/utils/Logger.js';
+export { CacheService }                  from './src/core/CacheService.js';
 export { AdminController }               from './src/routing/AdminController.js';
