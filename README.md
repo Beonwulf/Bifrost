@@ -326,6 +326,49 @@ async post() {
 
 ---
 
+### Streaming Gigantic Files (e.g. 2GB Videos)
+
+For very large files, `multipart/form-data` is inefficient and consumes a lot of RAM. Use **Direct Binary Streaming** instead. This bypasses the BodyParser for a specific route and streams the request directly to disk (using almost zero memory).
+
+**1. Bypass the BodyParser for the upload route:**
+```js
+await app.startup({ 
+    bodyParser: { 
+        maxBytes: 10 * 1024 * 1024,
+        bypass: ($req) => $req.url === '/api/stream-upload' 
+    } 
+});
+```
+
+**2. Pipe directly to disk in your controller:**
+```js
+import fs from 'node:fs';
+
+export default class StreamUploadController extends BBController {
+    static path = '/api/stream-upload';
+    static methods = ['put'];
+
+    async put() {
+        const stream = fs.createWriteStream('./gigantic-video.mp4');
+        this.req.pipe(stream);
+        
+        await new Promise(resolve => stream.on('finish', resolve));
+        this.json({ success: true });
+    }
+}
+```
+
+**In the frontend (client), send the file like this:**
+```javascript
+const file = document.querySelector('input[type="file"]').files;
+await fetch('/api/stream-upload', {
+    method: 'PUT',
+    body: file // The browser automatically streams the file in chunks!
+});
+```
+
+---
+
 ## CORS
 
 The built-in CORS Rune handles cross-origin requests, `OPTIONS` preflights, and `Vary: Origin` caching automatically.

@@ -323,6 +323,49 @@ async post() {
 
 ---
 
+### Gigantische Dateien streamen (z. B. 2GB Videos)
+
+Für sehr große Dateien ist `multipart/form-data` ineffizient und lastet den Arbeitsspeicher aus. Nutze stattdessen **Direct Binary Streaming**. Dabei wird der BodyParser für diese Route umgangen und der Request direkt auf die Festplatte gestreamt (nahezu 0 RAM-Verbrauch).
+
+**1. BodyParser für die Upload-Route bypassen:**
+```js
+await app.startup({ 
+    bodyParser: { 
+        maxBytes: 10 * 1024 * 1024,
+        bypass: ($req) => $req.url === '/api/stream-upload' 
+    } 
+});
+```
+
+**2. Im Controller direkt auf die Festplatte pipen:**
+```js
+import fs from 'node:fs';
+
+export default class StreamUploadController extends BBController {
+    static path = '/api/stream-upload';
+    static methods = ['put'];
+
+    async put() {
+        const stream = fs.createWriteStream('./gigantisches-video.mp4');
+        this.req.pipe(stream);
+        
+        await new Promise(resolve => stream.on('finish', resolve));
+        this.json({ success: true });
+    }
+}
+```
+
+**Im Frontend (Client) sendest du die Datei dann einfach so:**
+```javascript
+const file = document.querySelector('input[type="file"]').files;
+await fetch('/api/stream-upload', {
+    method: 'PUT',
+    body: file // Browser streamt die Datei automatisch chunkweise!
+});
+```
+
+---
+
 ## CORS
 
 Die eingebaute CORS-Rune ist hochflexibel und kümmert sich vollautomatisch um `OPTIONS`-Preflights, `Vary: Origin`-Caching und die Absicherung von Credentials-Konflikten.

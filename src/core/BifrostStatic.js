@@ -208,7 +208,13 @@ export class BifrostStatic {
 
 	static createBodyParserRune($options = {}) {
 		const maxBytes = $options.maxBytes ?? MAX_BODY_BYTES;
+		const bypass   = $options.bypass ?? null;
 		return async ($req, $res, $next) => {
+			if (bypass === true) return await $next();
+			if (typeof bypass === 'function' && bypass($req)) return await $next();
+			if (typeof bypass === 'string' && bypass.toUpperCase() === $req.method) return await $next();
+			if (Array.isArray(bypass) && bypass.map(m => String(m).toUpperCase()).includes($req.method)) return await $next();
+
 			if (['POST', 'PUT', 'PATCH'].includes($req.method)) {
 				const chunks = [];
 				let bytes    = 0;

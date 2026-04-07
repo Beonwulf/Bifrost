@@ -1,0 +1,27 @@
+# Changelog
+
+Alle bemerkenswerten Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
+
+Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
+und dieses Projekt folgt dem [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.15.0] - 2026-04-07
+
+### Hinzugefügt (Added)
+- **Direct Binary Streaming**: `bodyParser.bypass` in der `app.startup()` Konfiguration akzeptiert nun Arrays (z. B. `['PUT']`) oder Strings (`'PUT'`), um große Datei-Uploads RAM-schonend nativ als Stream zu verarbeiten.
+- **Authentifizierung & Sessions**: Native JWT-Implementierung (`AuthService`), schnelle In-Memory Sessions und neue Guards (`requireAuth`, `requireRole`) im `BBController`.
+- **AdminController**: Neue Basisklasse für geschützte Backend-Routen (`src/routing/AdminController.js`).
+- **Galdr Template Engine**: Vollständiges Feature-Set inklusive Layouts, Partials, Blöcken, Filtern und strukturierten Komponenten (`{% component %}`).
+- **Bifröst CLI**: Neues Kommandozeilen-Tool (`npx bifrost init` & `npx bifrost flags`) für schnelles Projekt-Scaffolding inklusive CSS-Framework und UI-Komponenten.
+- **Security & Middleware**: Native Runen für Rate-Limiting, Security Headers (CSP, HSTS) und flexibles CORS-Handling hinzugefügt.
+- **Logging**: Zero-Dependency File-Logger mit automatischer täglicher Rotation und Gzip-Kompression alter Logs.
+- **Internationalisierung (i18n)**: Locale-Prefix-Routing (SEO-URLs) und `I18n.js` Integration.
+
+### Geändert (Changed)
+- **Multipart/Form-Data**: Der interne BodyParser zerlegt File-Uploads nun komplett eigenständig und ohne externe `npm`-Pakete (wie Multer).
+- Optimierung der Galdr-Engine für maximale Performance und Sicherheit (Path-Traversal-Schutz, automatisches HTML-Escaping).
+- Socket.io CORS-Defaults auf eine sichere "Same-Origin" Richtlinie in Produktion gesetzt.
+
+### Behoben (Fixed)
+- CORS-Konflikte bei Kombination von Wildcard-Origin (`*`) und Credentials (`true`) werden nun dynamisch über Reflektion des Origin-Headers des Clients gelöst, um Browser-Blockaden zu verhindern.
+- Rate-Limit-IPv6 Bucket-Sicherheit verbessert (Normalisierung von `::ffff:1.2.3.4` zu `1.2.3.4`).
