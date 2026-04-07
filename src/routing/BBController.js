@@ -168,6 +168,19 @@ export class BBController {
 		this.html(rendered, $status);
 	}
 
+	/**
+	 * Initialisiert eine Server-Sent Events (SSE) Verbindung.
+	 * Hält den HTTP-Stream offen.
+	 */
+	sseInit() { this.#res.sseInit?.(); }
+
+	/**
+	 * Sendet Daten über eine offene SSE-Verbindung an den Client.
+	 * @param {any} $data Daten-Payload (Objekte werden als JSON gesendet)
+	 * @param {string} [$event] Optionaler Event-Name
+	 */
+	sseSend($data, $event = null) { this.#res.sseSend?.($data, $event); }
+
 	redirect($url, $status = 302) {
 		if (this.#res.writableEnded) return;
 		this.#res.writeHead($status, { Location: $url });

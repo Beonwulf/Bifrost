@@ -54,6 +54,7 @@ await app.run();
 - [CORS](#cors)
 - [CSRF Protection](#csrf-protection)
 - [WebSockets](#websockets)
+- [Server-Sent Events (SSE)](#server-sent-events-sse)
 - [SSL / HTTPS](#ssl--https)
 - [Logging](#logging)
 - [API Testing (app.inject)](#api-testing-appinject)
@@ -643,6 +644,41 @@ test('User API', async () => {
 
     assert.strictEqual(response.statusCode, 200);
     assert.strictEqual(response.json().success, true);
+});
+```
+
+---
+
+## Server-Sent Events (SSE)
+
+If you want to push data in real-time from the server to the client without the overhead of WebSockets (Socket.io), Bifröst provides built-in helpers for **Server-Sent Events**.
+
+**In your Controller:**
+```js
+import { BBController } from 'bifrost';
+
+export default class LiveTickerController extends BBController {
+    static path = '/api/ticker';
+    static methods = ['get'];
+
+    async get() {
+        this.sseInit(); // Set headers and keep stream open
+
+        const interval = setInterval(() => {
+            this.sseSend({ time: Date.now(), msg: 'Tick' }, 'update');
+        }, 1000);
+
+        // Important: Clean up when the client closes the tab!
+        this.req.on('close', () => clearInterval(interval));
+    }
+}
+```
+
+**In the frontend (Client):**
+```js
+const evtSource = new EventSource('/api/ticker');
+evtSource.addEventListener('update', (e) => {
+    console.log('New tick:', JSON.parse(e.data));
 });
 ```
 

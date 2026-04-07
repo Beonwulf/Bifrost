@@ -488,6 +488,28 @@ export class BifrostStatic {
 				res.json({ error: message }, status);
 			};
 
+			// Server-Sent Events (SSE) Initialisierung
+			res.sseInit = () => {
+				res.writeHead(200, { 
+					'Content-Type': 'text/event-stream', 
+					'Cache-Control': 'no-cache', 
+					'Connection': 'keep-alive',
+					'X-Accel-Buffering': 'no' // Verhindert, dass Proxies (wie Nginx) den Stream puffern
+				});
+				res.write('\n'); // Initiale Bestätigung
+			};
+
+			// Server-Sent Events (SSE) Senden
+			res.sseSend = (data, event = null) => {
+				if (event) res.write(`event: ${event}\n`);
+				const payload = typeof data === 'object' ? JSON.stringify(data) : String(data);
+				// Jede Zeile muss nach SSE-Standard mit "data: " beginnen
+				for (const line of payload.split('\n')) {
+					res.write(`data: ${line}\n`);
+				}
+				res.write('\n\n');
+			};
+
 			await next();
 		};
 	}

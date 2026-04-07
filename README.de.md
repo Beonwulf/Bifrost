@@ -52,6 +52,7 @@ await app.run();
 - [CORS](#cors)
 - [CSRF-Schutz](#csrf-schutz)
 - [WebSockets](#websockets)
+- [Server-Sent Events (SSE)](#server-sent-events-sse)
 - [SSL / HTTPS](#ssl--https)
 - [Logging](#logging)
 - [API Testing (app.inject)](#api-testing-appinject)
@@ -625,6 +626,41 @@ export default class StatsController extends BBController {
         this.json(stats);
     }
 }
+```
+
+---
+
+## Server-Sent Events (SSE)
+
+Wenn du Daten in Echtzeit vom Server zum Client pushen möchtest, ohne den Overhead von WebSockets (Socket.io) zu nutzen, bietet Bifröst native Helfer für **Server-Sent Events**.
+
+**Im Controller:**
+```js
+import { BBController } from 'bifrost';
+
+export default class LiveTickerController extends BBController {
+    static path = '/api/ticker';
+    static methods = ['get'];
+
+    async get() {
+        this.sseInit(); // Header setzen und Stream öffnen
+
+        const interval = setInterval(() => {
+            this.sseSend({ time: Date.now(), msg: 'Tick' }, 'update');
+        }, 1000);
+
+        // Wichtig: Aufräumen, wenn der Client den Tab schließt!
+        this.req.on('close', () => clearInterval(interval));
+    }
+}
+```
+
+**Im Frontend (Client):**
+```js
+const evtSource = new EventSource('/api/ticker');
+evtSource.addEventListener('update', (e) => {
+    console.log('Neuer Tick:', JSON.parse(e.data));
+});
 ```
 
 ---
