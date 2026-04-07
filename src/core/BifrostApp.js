@@ -4,6 +4,7 @@ import { Galdr }      from '../template/Galdr.js';
 import { NavRegistry } from '../routing/NavRegistry.js';
 import { handler404, handler500 } from '../defaults/routes.js';
 import { Logger }     from '../utils/Logger.js';
+import { EventEmitter } from 'node:events';
 
 /**
  * BifrostApp — Optionaler App-Layer für Bifröst.
@@ -95,6 +96,7 @@ export class BifrostApp {
 	#log       = null;
 	#services  = new Map();
 	#errorHandlers = new Map();
+	#events    = new EventEmitter({ captureRejections: true });
 
 
 	// ── Error-Handler ─────────────────────────────────────────────────────────
@@ -150,6 +152,7 @@ export class BifrostApp {
 	get db()      { return this.#db; }
 	set db($db)   { this.#db = $db; }
 	get log()     { return this.#log; }
+	get events()  { return this.#events; }
 
 
 	// ── Router-Shortcuts ─────────────────────────────────────────────────────
@@ -224,6 +227,12 @@ export class BifrostApp {
 		if (cfg.logging) {
 			this.#bifrost.use(Bifrost.createLoggerRune(this.#log));
 		}
+
+		// Event-Bus Fehler global abfangen, damit async-Fehler den Server nicht crashen
+		this.#events.on('error', (err) => {
+			this.#log ? this.#log.error('Event-Bus Fehler:', err) : console.error('Event-Bus Fehler:', err);
+		});
+
 		if (cfg.liveReload && process.env.NODE_ENV !== 'production') {
 			cfg.socket = true; // Zwingend für den Client-Refresh benötigt
 			this.#bifrost.use(Bifrost.createLiveReloadRune());

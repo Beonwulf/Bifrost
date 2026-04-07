@@ -83,6 +83,7 @@ export class BBController {
 	get app()  { return this.#app; }
 	get req()  { return this.#req; }
 	get res()  { return this.#res; }
+	get events() { return this.#app?.events; }
 
 
 	// ── Response-Helfer ───────────────────────────────────────────────────────

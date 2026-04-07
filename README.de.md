@@ -53,6 +53,7 @@ await app.run();
 - [CSRF-Schutz](#csrf-schutz)
 - [WebSockets](#websockets)
 - [Server-Sent Events (SSE)](#server-sent-events-sse)
+- [Event-Bus](#event-bus)
 - [SSL / HTTPS](#ssl--https)
 - [Logging](#logging)
 - [API Testing (app.inject)](#api-testing-appinject)
@@ -661,6 +662,39 @@ const evtSource = new EventSource('/api/ticker');
 evtSource.addEventListener('update', (e) => {
     console.log('Neuer Tick:', JSON.parse(e.data));
 });
+```
+
+---
+
+## Event-Bus
+
+Bifröst verfügt über einen globalen Event-Bus auf Basis des nativen Node.js `EventEmitter`. Dies ist ideal für eine Event-Driven Architecture, um Hintergrundaufgaben (wie das Versenden von E-Mails) vom eigentlichen HTTP-Request zu entkoppeln.
+
+**Events registrieren (z. B. in der `app.js`):**
+```js
+app.events.on('user.registered', async (user) => {
+    console.log(`Neuer Nutzer: ${user.name}`);
+    // await MailService.sendWelcome(user);
+});
+```
+
+**Events auslösen (im Controller):**
+```js
+import { BBController } from 'bifrost';
+
+export default class RegisterController extends BBController {
+    static path = '/register';
+    static methods = ['post'];
+
+    async post() {
+        const user = { id: 1, name: this.body.name };
+        
+        // Event asynchron im Hintergrund auslösen
+        this.events.emit('user.registered', user);
+        
+        this.json({ success: true });
+    }
+}
 ```
 
 ---
