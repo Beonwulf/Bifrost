@@ -5,6 +5,7 @@ import { NavRegistry } from '../routing/NavRegistry.js';
 import { handler404, handler500 } from '../defaults/routes.js';
 import { Logger }     from '../utils/Logger.js';
 import { EventEmitter } from 'node:events';
+import { SchedulerService } from './SchedulerService.js';
 
 /**
  * BifrostApp — Optionaler App-Layer für Bifröst.
@@ -153,6 +154,7 @@ export class BifrostApp {
 	set db($db)   { this.#db = $db; }
 	get log()     { return this.#log; }
 	get events()  { return this.#events; }
+	get schedule(){ return SchedulerService; }
 
 
 	// ── Router-Shortcuts ─────────────────────────────────────────────────────

@@ -56,6 +56,7 @@ await app.run();
 - [WebSockets](#websockets)
 - [Server-Sent Events (SSE)](#server-sent-events-sse)
 - [Event-Bus](#event-bus)
+- [Task Scheduler](#task-scheduler)
 - [SSL / HTTPS](#ssl--https)
 - [Logging](#logging)
 - [API Testing (app.inject)](#api-testing-appinject)
@@ -714,6 +715,28 @@ const evtSource = new EventSource('/api/ticker');
 evtSource.addEventListener('update', (e) => {
     console.log('New tick:', JSON.parse(e.data));
 });
+```
+
+---
+
+## Task Scheduler
+
+Bifröst includes a lightweight task scheduler for running background jobs (like cronjobs) without any external dependencies.
+
+```js
+// Run a task every 5 minutes (300,000 ms)
+app.schedule.interval('ping', 300_000, async () => {
+    console.log('Ping!');
+});
+
+// Run a task daily at a specific time
+app.schedule.daily('cleanup', '03:00', async () => {
+    // await app.db.query('DELETE FROM sessions WHERE expired = 1');
+    console.log('Nightly cleanup done.');
+});
+
+// Stop a running task
+app.schedule.stop('ping');
 ```
 
 ---

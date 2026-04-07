@@ -54,6 +54,7 @@ await app.run();
 - [WebSockets](#websockets)
 - [Server-Sent Events (SSE)](#server-sent-events-sse)
 - [Event-Bus](#event-bus)
+- [Task Scheduler](#task-scheduler)
 - [SSL / HTTPS](#ssl--https)
 - [Logging](#logging)
 - [API Testing (app.inject)](#api-testing-appinject)
@@ -695,6 +696,28 @@ export default class RegisterController extends BBController {
         this.json({ success: true });
     }
 }
+```
+
+---
+
+## Task Scheduler
+
+Bifröst bringt einen leichtgewichtigen Task-Scheduler mit, um Hintergrundaufgaben (Cronjobs) ohne externe Abhängigkeiten zu definieren.
+
+```js
+// Führt eine Aufgabe alle 5 Minuten (300.000 ms) aus
+app.schedule.interval('ping', 300_000, async () => {
+    console.log('Ping!');
+});
+
+// Führt eine Aufgabe jeden Tag um exakt 03:00 Uhr aus
+app.schedule.daily('cleanup', '03:00', async () => {
+    // await app.db.query('DELETE FROM sessions WHERE expired = 1');
+    console.log('Nächtlicher Cleanup beendet.');
+});
+
+// Stoppt einen laufenden Task
+app.schedule.stop('ping');
 ```
 
 ---

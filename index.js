@@ -17,4 +17,5 @@ export { I18n }                          from './src/i18n/I18n.js';
 export { AuthService, TokenExpiredError, TokenInvalidError } from './src/core/AuthService.js';
 export { Logger }                        from './src/utils/Logger.js';
 export { CacheService }                  from './src/core/CacheService.js';
+export { SchedulerService }              from './src/core/SchedulerService.js';
 export { AdminController }               from './src/routing/AdminController.js';

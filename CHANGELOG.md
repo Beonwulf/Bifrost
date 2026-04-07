@@ -5,6 +5,11 @@ Alle bemerkenswerten Änderungen an diesem Projekt werden in dieser Datei dokume
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 und dieses Projekt folgt dem [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0] - 2026-04-07
+
+### Hinzugefügt (Added)
+- **Task Scheduler**: Nativer `SchedulerService` (`app.schedule`), um Hintergrundaufgaben in Intervallen oder zu festen Uhrzeiten (z. B. täglich um `03:00`) ohne externe Cron-Pakete auszuführen.
+
 ## [0.22.0] - 2026-04-07
 
 ### Hinzugefügt (Added)
