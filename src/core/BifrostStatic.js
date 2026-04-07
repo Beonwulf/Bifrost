@@ -3,6 +3,8 @@ import { readFile, stat } from 'node:fs/promises';
 import { join, extname, resolve, sep } from 'node:path';
 import zlib from 'node:zlib';
 import { promisify } from 'node:util';
+import crypto from 'node:crypto';
+import { AuthService } from './AuthService.js';
 
 
 const gzip = promisify(zlib.gzip);
@@ -20,6 +22,34 @@ export class BifrostStatic {
 	static disableCompression() { BifrostStatic.#compression = false; }
 	static useCompression() { return BifrostStatic.#compression; }
 
+	/**
+	 * Logger-Rune — loggt jeden HTTP-Request (Methode, URL, Status, Dauer).
+	 * @param {import('../utils/Logger.js').Logger} $logger
+	 */
+	static createLoggerRune($logger) {
+		return async (req, res, next) => {
+			const start = performance.now();
+
+			res.on('finish', () => {
+				const ms = (performance.now() - start).toFixed(1);
+				const status = res.statusCode;
+				
+				// Farbe anhand des HTTP-Statuscodes
+				let statusColor = '\x1b[32m'; // Grün für 200er
+				if (status >= 300) statusColor = '\x1b[36m'; // Cyan für 300er (Redirects)
+				if (status >= 400) statusColor = '\x1b[33m'; // Gelb für 400er (Client Error)
+				if (status >= 500) statusColor = '\x1b[31m'; // Rot für 500er (Server Error)
+				
+				const meta = `${statusColor}${status}\x1b[0m - ${ms}ms`;
+				
+				// Socket.io Polling spamt oft die Logs, daher als 'debug' einstufen
+				const level = req.url.startsWith('/socket.io') ? 'debug' : 'info';
+				$logger[level](`[${req.method}] ${req.url}`, meta);
+			});
+
+			await next();
+		};
+	}
 
 	static createStaticRune( $rootDir ) {
 		// Absoluter, kanonischer Wurzelpfad — einmalig berechnet
@@ -288,17 +318,109 @@ export class BifrostStatic {
 			// 2. Token validieren und req.user setzen
 			if (token) {
 				try {
-					const authService = $app.service('auth');
-					if (!authService) {
-						throw new Error('AuthService ist nicht in der App registriert!');
-					}
-					// verify() wirft einen Fehler, wenn abgelaufen oder manipuliert
-					req.user = authService.verify(token);
+					req.user = AuthService.verify(token);
 				} catch (err) {
 					console.error('Auth-Fehler:', err.message);
 					req.user = null;
 				}
 			}
+
+			await next();
+		};
+	}
+
+	/**
+	 * Session-Rune — stellt einen In-Memory Session-Store zur Verfügung.
+	 * Bindet das Session-Objekt an `req.session`.
+	 *
+	 * @param {object} [$options]
+	 * @param {string}  [$options.name]     Cookie-Name (default: 'bifrost_sid')
+	 * @param {number}  [$options.duration] Session-Dauer in Sekunden (default: 3600 = 1 Stunde)
+	 * @param {boolean} [$options.secure]   Secure-Flag für Cookie erzwingen (default: auto-detect)
+	 */
+	static createSessionRune($options = {}) {
+		const cookieName = $options.name || 'bifrost_sid';
+		const durationMs = ($options.duration || 3600) * 1000;
+		const forceSecure = $options.secure ?? null;
+
+		const store = new Map();
+
+		// Periodisches Cleanup abgelaufener Sessions, um Memory-Leaks zu vermeiden
+		const interval = setInterval(() => {
+			const now = Date.now();
+			for (const [sid, session] of store) {
+				if (session._exp <= now) store.delete(sid);
+			}
+		}, 60_000);
+		if (interval.unref) interval.unref();
+
+		return async (req, res, next) => {
+			let sid = null;
+			
+			// 1. Session-ID aus Cookie lesen
+			if (req.headers.cookie) {
+				const match = req.headers.cookie.match(new RegExp(`(^|;\\s*)${cookieName}=([^;]+)`));
+				if (match) sid = decodeURIComponent(match[2]);
+			}
+
+			const now = Date.now();
+			let session = sid ? store.get(sid) : null;
+			let sendCookie = false;
+
+			// 2. Validieren oder neu erstellen
+			if (!session || session._exp <= now) {
+				if (session) store.delete(sid);
+				sid = crypto.randomBytes(32).toString('hex');
+				session = {};
+				// _exp versteckt als non-enumerable Property anlegen (taucht nicht in Iterationen auf)
+				Object.defineProperty(session, '_exp', { value: now + durationMs, writable: true });
+				store.set(sid, session);
+				sendCookie = true;
+			} else {
+				// Ablaufzeit verlängern (Rolling Session). 
+				// Performance-Tipp: Wir erneuern den Cookie nur im Browser, wenn schon mind. 
+				// 60 Sekunden abgelaufen sind, um bei jedem Klick redundante Header zu sparen.
+				if (session._exp < now + durationMs - 60_000) {
+					session._exp = now + durationMs;
+					sendCookie = true;
+				}
+			}
+
+			// 3. Hilfsfunktion zum Setzen/Löschen des Cookies (Vermeidet Code-Duplikate)
+			const applyCookie = (currentSid, maxAgeSecs) => {
+				const isSecure = forceSecure !== null ? forceSecure : (req.socket?.encrypted || req.headers['x-forwarded-proto']?.includes('https'));
+				let cookieStr = `${cookieName}=${encodeURIComponent(currentSid)}; Path=/; Max-Age=${maxAgeSecs}; HttpOnly; SameSite=Lax`;
+				if (isSecure) cookieStr += '; Secure';
+				
+				let existing = res.getHeader('Set-Cookie');
+				let cookies = existing ? (Array.isArray(existing) ? existing : [existing]) : [];
+				cookies.push(cookieStr);
+				res.setHeader('Set-Cookie', cookies);
+			};
+
+			if (sendCookie) {
+				applyCookie(sid, Math.floor(durationMs / 1000));
+			}
+
+			// 4. Session an req binden und destroy-Methode anfügen
+			req.session = session;
+			req.session.destroy = () => {
+				store.delete(sid);
+				req.session = null;
+				applyCookie('', 0);
+			};
+
+			// 5. regenerate-Methode für Logins (Schutz vor Session Fixation)
+			req.session.regenerate = () => {
+				const oldData = { ...session }; // Aktuelle Daten retten
+				store.delete(sid);
+				sid = crypto.randomBytes(32).toString('hex');
+				session = oldData;
+				Object.defineProperty(session, '_exp', { value: Date.now() + durationMs, writable: true });
+				store.set(sid, session);
+				req.session = session;
+				applyCookie(sid, Math.floor(durationMs / 1000));
+			};
 
 			await next();
 		};

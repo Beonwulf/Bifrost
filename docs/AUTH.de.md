@@ -4,16 +4,15 @@ Bifröst bringt ein eigenes, natives Auth-System auf Basis von **JSON Web Tokens
 
 ## 1. Setup in der App
 
-Um Auth in Bifröst zu aktivieren, musst du den `AuthService` als Service registrieren und die `AuthRune` (Middleware) einhängen.
+Um Auth in Bifröst zu aktivieren, musst du den `AuthService` statisch initialisieren und die `AuthRune` (Middleware) einhängen.
 
 ```javascript
 import { BifrostApp, Bifrost, AuthService } from 'bifrost';
 
 const app = new BifrostApp();
 
-// 1. JWT-Secret definieren (WICHTIG: In Production aus Umgebungsvariablen laden!)
-const secret = process.env.JWT_SECRET || 'super-geheimes-secret';
-app.register('auth', new AuthService(secret));
+// 1. JWT-Secret definieren und Service statisch initialisieren
+AuthService.init(process.env.JWT_SECRET || 'super-geheimes-secret', { expiresIn: 86400 });
 
 await app.startup({ /* ... */ });
 
@@ -30,7 +29,7 @@ await app.run();
 In deinem Login-Controller nutzt du den `AuthService`, um nach erfolgreicher Prüfung der Zugangsdaten ein Token auszustellen.
 
 ```javascript
-import { BBController } from 'bifrost';
+import { BBController, AuthService } from 'bifrost';
 
 export default class LoginController extends BBController {
     static path = '/login';
@@ -45,8 +44,8 @@ export default class LoginController extends BBController {
             // Payload für das Token definieren
             const payload = { id: 1, name: 'Admin', role: 'admin' };
             
-            // Token signieren (Gültigkeit: 24 Stunden = 86400 Sekunden)
-            const token = this.app.service('auth').sign(payload, 86400);
+            // Token signieren (Gültigkeit in Sekunden überschreibt ggf. Default)
+            const token = AuthService.sign(payload, 86400);
             
             // Token sicher als HttpOnly Cookie setzen
             this.setCookie('auth_token', token, { httpOnly: true, path: '/' });
@@ -111,4 +110,24 @@ export default class DashboardController extends AdminController {
         await this.render('admin/dashboard', { user: this.user });
     }
 }
+
+---
+
+## 4. In-Memory Sessions (Alternative zu JWT)
+
+Wenn du anstelle von zustandslosen JWTs lieber mit serverseitigen Sessions arbeiten möchtest, bietet Bifröst eine schnelle In-Memory Session-Rune. Die Sessions integrieren sich nahtlos in die Guards (`requireAuth`, `requireRole`).
+
+```javascript
+// In app.startup() aktivieren:
+await app.startup({
+    sessions: { name: 'bifrost_sid', duration: 3600, secure: true }
+});
+```
+
+Im Controller hast du nun bequemen Zugriff auf `this.session`:
+```javascript
+this.session.user = { id: 1, role: 'admin' }; // User einloggen (wird von Guards erkannt)
+this.session.regenerate();                    // Schutz vor Session-Fixation beim Login
+this.session.destroy();                       // User ausloggen
+```
 ```

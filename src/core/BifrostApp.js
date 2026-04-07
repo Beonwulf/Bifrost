@@ -3,6 +3,7 @@ import { Router }     from '../routing/Router.js';
 import { Galdr }      from '../template/Galdr.js';
 import { NavRegistry } from '../routing/NavRegistry.js';
 import { handler404, handler500 } from '../defaults/routes.js';
+import { Logger }     from '../utils/Logger.js';
 
 /**
  * BifrostApp — Optionaler App-Layer für Bifröst.
@@ -37,6 +38,8 @@ export class BifrostApp {
 		locales:         null,
 		securityHeaders: false, // true oder Options-Objekt übergeben
 		rateLimit:       false, // true oder { points, duration, trustProxy } übergeben
+		sessions:        false, // true oder Options-Objekt { name, duration, secure } übergeben
+		logging:         { level: 'info', file: false }, // Logger Defaults
 	};
 
 	// ── Konfiguration (statische Setter) ──────────────────────────────────────
@@ -65,6 +68,8 @@ export class BifrostApp {
 	static enableResponseHelpers() { BifrostApp.cfg.responseHelpers = true; }
 	static disableResponseHelpers(){ BifrostApp.cfg.responseHelpers = false; }
 	static enableSecurityHeaders($options = {}) { BifrostApp.cfg.securityHeaders = $options; }
+	static enableSessions($options = {}) { BifrostApp.cfg.sessions = $options; }
+	static enableLogging($options = {})  { BifrostApp.cfg.logging = { ...BifrostApp.cfg.logging, ...$options }; }
 	static enableSSL($key, $cert)  {
 		BifrostApp.cfg.ssl = true;
 		if ($key && $cert) BifrostApp.cfg.sslCert = { key: $key, cert: $cert };
@@ -81,6 +86,7 @@ export class BifrostApp {
 	#io        = null;
 	#router    = null;
 	#db        = null;
+	#log       = null;
 	#services  = new Map();
 	#errorHandlers = new Map();
 
@@ -137,6 +143,7 @@ export class BifrostApp {
 	get router()  { return this.#router; }
 	get db()      { return this.#db; }
 	set db($db)   { this.#db = $db; }
+	get log()     { return this.#log; }
 
 
 	// ── Router-Shortcuts ─────────────────────────────────────────────────────
@@ -183,6 +190,8 @@ export class BifrostApp {
 	async startup($options = {}) {
 		const cfg = { ...BifrostApp.cfg, ...$options };
 
+		this.#log = new Logger(cfg.logging);
+
 		this.#bifrost = new Bifrost({
 			port:        cfg.port,
 			host:        cfg.host,
@@ -194,12 +203,18 @@ export class BifrostApp {
 		// Locale-Prefix-Routing konfigurieren
 		if (cfg.locales) this.#bifrost.setLocales(cfg.locales);
 
-		// Runen registrieren — Reihenfolge: Security → RateLimit → ResponseHelpers → Body → Static
+		// Runen registrieren — Reihenfolge: Logger → Security → RateLimit → ResponseHelpers → Body → Static
+		if (cfg.logging) {
+			this.#bifrost.use(Bifrost.createLoggerRune(this.#log));
+		}
 		if (cfg.securityHeaders) this.#bifrost.use(Bifrost.createSecurityHeadersRune(
 			typeof cfg.securityHeaders === 'object' ? cfg.securityHeaders : {}
 		));
 		if (cfg.rateLimit)       this.#bifrost.use(Bifrost.createRateLimitRune(
 			typeof cfg.rateLimit === 'object' ? cfg.rateLimit : {}
+		));
+		if (cfg.sessions)        this.#bifrost.use(Bifrost.createSessionRune(
+			typeof cfg.sessions === 'object' ? cfg.sessions : {}
 		));
 		if (cfg.responseHelpers) this.#bifrost.use(Bifrost.createResponseHelperRune());
 		if (cfg.bodyParser)      this.#bifrost.use(Bifrost.createBodyParserRune());

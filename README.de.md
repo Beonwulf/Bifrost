@@ -48,6 +48,7 @@ await app.run();
 - [Middleware (Runen)](#middleware-runen)
 - [WebSockets](#websockets)
 - [SSL / HTTPS](#ssl--https)
+- [Logging](#logging)
 - [Template Engine — Galdr](./src/template/README.de.md)
 - [Service-Registry](#service-registry)
 - [Fehlerbehandlung](#fehlerbehandlung)
@@ -69,6 +70,7 @@ BifrostApp.setHost('0.0.0.0');
 BifrostApp.setStatic('public');
 BifrostApp.enableBodyParser();
 BifrostApp.enableSocket();
+BifrostApp.enableLogging({ level: 'debug', file: true });
 BifrostApp.enableSSL();           // Selbst-signiertes Zertifikat (auto-generiert)
 // BifrostApp.enableSSL(key, cert) // Eigenes Zertifikat
 ```
@@ -84,6 +86,7 @@ const { app, bifrost, io, router } = await app.startup({
     static:          'public',   // Ordner für statische Dateien
     bodyParser:      true,
     compression:     false,
+        sessions:        { duration: 3600 }, // In-Memory Sessions aktivieren
     responseHelpers: true,       // res.json() / res.error()
 });
 ```

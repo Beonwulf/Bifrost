@@ -16,6 +16,7 @@
  */
 import { I18n }         from '../i18n/I18n.js';
 import { NavRegistry }  from './NavRegistry.js';
+import { AuthService }  from '../core/AuthService.js';
 export class BBController {
 
 	// ── Static-API (vom Router ausgelesen) ────────────────────────────────────
@@ -297,9 +298,7 @@ export class BBController {
 	 * Prüft rein strukturell, ob das aktuelle Token das Format eines JWT hat (Header.Payload.Signature).
 	 */
 	get isJWT() {
-		const t = this.token;
-		if (!t) return false;
-		return /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/.test(t);
+		return AuthService.isJWT(this.token);
 	}
 
 	/**
@@ -307,22 +306,15 @@ export class BBController {
 	 * Nützlich, um z.B. Ablaufdaten (exp) oder Metadaten auszulesen, bevor verifiziert wird.
 	 */
 	get jwtPayload() {
-		if (!this.isJWT) return null;
-		try {
-			const base64Url = this.token.split('.')[1];
-			const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-			const jsonPayload = Buffer.from(base64, 'base64').toString('utf-8');
-			return JSON.parse(jsonPayload);
-		} catch (err) {
-			return null;
-		}
+		return AuthService.decode(this.token);
 	}
 
 	/**
 	 * Gibt den aktiven User zurück (wird idealerweise von einer Auth-Rune gesetzt)
 	 */
 	get user() {
-		return this.req.user || null;
+		// Prüft zuerst auf ein Token-basiertes req.user, danach auf einen User in der Session
+		return this.req.user || this.session?.user || null;
 	}
 
 	/**
@@ -330,6 +322,14 @@ export class BBController {
 	 */
 	get isAuthenticated() {
 		return !!this.user;
+	}
+
+	/**
+	 * Gibt die aktuelle Session zurück (erfordert aktivierte Session-Rune).
+	 * @returns {object|null}
+	 */
+	get session() {
+		return this.req.session || null;
 	}
 
 	// ── Guards ───────────────────────────────────────────────────────────────

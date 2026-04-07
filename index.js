@@ -13,5 +13,6 @@ export { Router }                        from './src/routing/Router.js';
 export { NavRegistry }                   from './src/routing/NavRegistry.js';
 export { Galdr, BUILTIN_TEMPLATES }      from './src/template/Galdr.js';
 export { I18n }                          from './src/i18n/I18n.js';
-export { AuthService }                   from './src/core/AuthService.js';
+export { AuthService, TokenExpiredError, TokenInvalidError } from './src/core/AuthService.js';
+export { Logger }                        from './src/utils/Logger.js';
 export { AdminController }               from './src/routing/AdminController.js';
