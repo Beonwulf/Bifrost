@@ -21,11 +21,11 @@ export class Logger {
 	#maxDays;
 	#isRotating = false;
 
-	constructor(options = {}) {
-		this.#level = LEVELS[options.level || 'info'] ?? 1;
-		this.#writeToFile = options.file ?? false;
-		this.#logDir = options.dir ? path.resolve(process.cwd(), options.dir) : path.resolve(process.cwd(), 'logs');
-		this.#maxDays = options.maxDays ?? 30; // Standardmäßig 30 Tage aufheben
+	constructor($options = {}) {
+		this.#level = LEVELS[$options.level || 'info'] ?? 1;
+		this.#writeToFile = $options.file ?? false;
+		this.#logDir = $options.dir ? path.resolve(process.cwd(), $options.dir) : path.resolve(process.cwd(), 'logs');
+		this.#maxDays = $options.maxDays ?? 30; // Standardmäßig 30 Tage aufheben
 
 		if (this.#writeToFile) {
 			if (!fs.existsSync(this.#logDir)) {
@@ -40,8 +40,8 @@ export class Logger {
 		const logFile = path.join(this.#logDir, 'bifrost.log');
 		// Stream im "Append" (Anhängen)-Modus öffnen
 		this.#stream = fs.createWriteStream(logFile, { flags: 'a' });
-		this.#stream.on('error', (err) => {
-			console.error('⚠️ Logger Stream Fehler:', err.message);
+		this.#stream.on('error', ($err) => {
+			console.error('⚠️ Logger Stream Fehler:', $err.message);
 		});
 	}
 
@@ -81,8 +81,8 @@ export class Logger {
 
 				// 6. Alte Archive bereinigen
 				await this.#cleanupOldLogs();
-			} catch (err) {
-				console.error('⚠️ Fehler bei der Log-Rotation:', err);
+			} catch ($err) {
+				console.error('⚠️ Fehler bei der Log-Rotation:', $err);
 				if (!this.#stream || this.#stream.closed) this.#initStream();
 			} finally {
 				this.#isRotating = false;
@@ -106,38 +106,38 @@ export class Logger {
 					}
 				}
 			}
-		} catch (err) {
-			console.error('⚠️ Fehler beim Bereinigen alter Logs:', err);
+		} catch ($err) {
+			console.error('⚠️ Fehler beim Bereinigen alter Logs:', $err);
 		}
 	}
 
-	log(levelName, message, meta = '') {
-		const levelNum = LEVELS[levelName];
+	log($levelName, $message, $meta = '') {
+		const levelNum = LEVELS[$levelName];
 		if (levelNum < this.#level) return;
 
 		this.#checkRotation(); // async Fire & Forget
 
 		const now = new Date().toISOString();
-		const color = COLORS[levelName] || COLORS.reset;
+		const color = COLORS[$levelName] || COLORS.reset;
 
-		const formatTerm = (v) => v instanceof Error ? (v.stack || v.message) : v;
-		const termMsg = formatTerm(message);
-		const termMeta = meta ? ` ${formatTerm(meta)}` : '';
+		const formatTerm = ($v) => $v instanceof Error ? ($v.stack || $v.message) : $v;
+		const termMsg = formatTerm($message);
+		const termMeta = $meta ? ` ${formatTerm($meta)}` : '';
 		
 		// Terminal Ausgabe
-		console.log(`\x1b[90m[${now}]\x1b[0m ${color}[${levelName.toUpperCase()}]\x1b[0m ${termMsg}${termMeta}`);
+		console.log(`\x1b[90m[${now}]\x1b[0m ${color}[${$levelName.toUpperCase()}]\x1b[0m ${termMsg}${termMeta}`);
 
 		// Datei-Ausgabe (Ohne Terminal-Farbcodes)
 		if (this.#writeToFile && this.#stream) {
-			const formatFile = (v) => v instanceof Error ? (v.stack || v.message) : (typeof v === 'string' ? v.replace(/\x1B\[\d+m/g, '') : JSON.stringify(v));
-			const cleanMsg = formatFile(message);
-			const cleanMeta = meta ? ` ${formatFile(meta)}` : '';
-			this.#stream.write(`[${now}] [${levelName.toUpperCase()}] ${cleanMsg}${cleanMeta}\n`);
+			const formatFile = ($v) => $v instanceof Error ? ($v.stack || $v.message) : (typeof $v === 'string' ? $v.replace(/\x1B\[\d+m/g, '') : JSON.stringify($v));
+			const cleanMsg = formatFile($message);
+			const cleanMeta = $meta ? ` ${formatFile($meta)}` : '';
+			this.#stream.write(`[${now}] [${$levelName.toUpperCase()}] ${cleanMsg}${cleanMeta}\n`);
 		}
 	}
 
-	debug(msg, meta = '') { this.log('debug', msg, meta); }
-	info(msg,  meta = '') { this.log('info', msg, meta); }
-	warn(msg,  meta = '') { this.log('warn', msg, meta); }
-	error(msg, meta = '') { this.log('error', msg, meta); }
+	debug($msg, $meta = '') { this.log('debug', $msg, $meta); }
+	info($msg,  $meta = '') { this.log('info', $msg, $meta); }
+	warn($msg,  $meta = '') { this.log('warn', $msg, $meta); }
+	error($msg, $meta = '') { this.log('error', $msg, $meta); }
 }

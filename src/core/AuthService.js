@@ -1,16 +1,16 @@
 import crypto from 'node:crypto';
 
 export class TokenExpiredError extends Error {
-	constructor(message = 'Token ist abgelaufen.') {
-		super(message);
+	constructor($message = 'Token ist abgelaufen.') {
+		super($message);
 		this.name = 'TokenExpiredError';
 		this.code = 'TOKEN_EXPIRED';
 	}
 }
 
 export class TokenInvalidError extends Error {
-	constructor(message = 'Ungültiges Token.') {
-		super(message);
+	constructor($message = 'Ungültiges Token.') {
+		super($message);
 		this.name = 'TokenInvalidError';
 		this.code = 'TOKEN_INVALID';
 	}
@@ -28,42 +28,42 @@ export class AuthService {
 	/**
 	 * Mappt den JWT-Algorithmus auf den internen Node.js Crypto-Hash
 	 */
-	static #getHashAlg(jwtAlg) {
-		switch (jwtAlg) {
+	static #getHashAlg($jwtAlg) {
+		switch ($jwtAlg) {
 			case 'HS256': return 'sha256';
 			case 'HS384': return 'sha384';
 			case 'HS512': return 'sha512';
-			default: throw new Error(`Nicht unterstützter Algorithmus: ${jwtAlg}`);
+			default: throw new Error(`Nicht unterstützter Algorithmus: ${$jwtAlg}`);
 		}
 	}
 
 	/**
 	 * Initialisiert den globalen Auth-Service mit einem Secret.
-	 * @param {string} secret 
+	 * @param {string} $secret 
 	 * @param {object} [$options]
 	 * @param {number} [$options.expiresIn] Standard-Ablaufzeit in Sekunden
 	 * @param {string} [$options.algorithm] HMAC-Algorithmus (HS256, HS384, HS512)
 	 */
-	static init(secret, $options = {}) {
-		if (!secret) throw new Error('AuthService benötigt ein Secret!');
-		AuthService.#secret = secret;
+	static init($secret, $options = {}) {
+		if (!$secret) throw new Error('AuthService benötigt ein Secret!');
+		AuthService.#secret = $secret;
 		if ($options.expiresIn) AuthService.#expiresIn = $options.expiresIn;
 		if ($options.algorithm) AuthService.#algorithm = $options.algorithm;
 	}
 
 	/**
 	 * Erstellt einen signierten JWT.
-	 * @param {object} payload Die Nutzdaten (z.B. { id: 1, role: 'admin' })
-	 * @param {number} [expiresInSeconds] Ablaufzeit in Sekunden (überschreibt den Default)
+	 * @param {object} $payload Die Nutzdaten (z.B. { id: 1, role: 'admin' })
+	 * @param {number} [$expiresInSeconds] Ablaufzeit in Sekunden (überschreibt den Default)
 	 * @returns {string} Das fertige JWT
 	 */
-	static sign(payload, expiresInSeconds = AuthService.#expiresIn) {
+	static sign($payload, $expiresInSeconds = AuthService.#expiresIn) {
 		if (!AuthService.#secret) throw new Error('AuthService wurde nicht initialisiert!');
 
 		const header = { alg: AuthService.#algorithm, typ: 'JWT' };
 		const now = Math.floor(Date.now() / 1000);
 
-		const jwtPayload = { ...payload, iat: now, exp: now + expiresInSeconds };
+		const jwtPayload = { ...$payload, iat: now, exp: now + $expiresInSeconds };
 
 		const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
 		const encodedPayload = Buffer.from(JSON.stringify(jwtPayload)).toString('base64url');
@@ -80,10 +80,10 @@ export class AuthService {
 	 * Verifiziert einen JWT und gibt den Payload zurück.
 	 * Wirft einen Fehler, wenn das Token manipuliert oder abgelaufen ist.
 	 */
-	static verify(token) {
+	static verify($token) {
 		if (!AuthService.#secret) throw new Error('AuthService wurde nicht initialisiert!');
 
-		const parts = token.split('.');
+		const parts = $token.split('.');
 		if (parts.length !== 3) throw new TokenInvalidError('Ungültiges Token-Format.');
 
 		const [encodedHeader, encodedPayload, signature] = parts;
@@ -117,21 +117,21 @@ export class AuthService {
 	/**
 	 * Prüft rein strukturell, ob der String das Format eines JWT hat.
 	 */
-	static isJWT(token) {
-		if (!token) return false;
-		return /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/.test(token);
+	static isJWT($token) {
+		if (!$token) return false;
+		return /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/.test($token);
 	}
 
 	/**
 	 * Dekodiert den Payload eines JWTs (ohne Signatur-Prüfung).
 	 */
-	static decode(token) {
-		if (!AuthService.isJWT(token)) return null;
+	static decode($token) {
+		if (!AuthService.isJWT($token)) return null;
 		try {
-			const base64Url = token.split('.')[1];
+			const base64Url = $token.split('.')[1];
 			const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
 			return JSON.parse(Buffer.from(base64, 'base64').toString('utf-8'));
-		} catch (err) {
+		} catch ($err) {
 			return null;
 		}
 	}

@@ -46,6 +46,7 @@ await app.run();
   - [Funktionale Routen](#funktionale-routen)
   - [BBController](#bbcontroller)
 - [Middleware (Runen)](#middleware-runen)
+- [CORS](#cors)
 - [WebSockets](#websockets)
 - [SSL / HTTPS](#ssl--https)
 - [Logging](#logging)
@@ -70,6 +71,7 @@ BifrostApp.setHost('0.0.0.0');
 BifrostApp.setStatic('public');
 BifrostApp.enableBodyParser();
 BifrostApp.enableSocket();
+BifrostApp.enableCors({ origin: ['http://localhost:3000', 'https://meine-app.de'] });
 BifrostApp.enableLogging({ level: 'debug', file: true });
 BifrostApp.enableSSL();           // Selbst-signiertes Zertifikat (auto-generiert)
 // BifrostApp.enableSSL(key, cert) // Eigenes Zertifikat
@@ -85,8 +87,10 @@ const { app, bifrost, io, router } = await app.startup({
     socket:          false,
     static:          'public',   // Ordner für statische Dateien
     bodyParser:      true,
+        cors:            true,       // Standard-CORS aktivieren
     compression:     false,
         sessions:        { duration: 3600 }, // In-Memory Sessions aktivieren
+        logging:         { level: 'info', file: true, maxDays: 30 }, // Rotierendes File-Logging
     responseHelpers: true,       // res.json() / res.error()
 });
 ```
@@ -274,6 +278,12 @@ bifrost.use(Bifrost.createSecurityHeadersRune({
     hstsMaxAge: 31_536_000,
 }));
 
+// CORS — Behandelt Cross-Origin Anfragen & OPTIONS-Preflights
+bifrost.use(Bifrost.createCorsRune({
+    origin: ['https://frontend.de'],
+    credentials: true
+}));
+
 // Rate Limiting — Fixed Window pro IP, kein externes Package nötig
 // trustProxy: true wenn hinter nginx/Caddy (liest X-Forwarded-For)
 bifrost.use(Bifrost.createRateLimitRune({ points: 100, duration: 60 }));
@@ -283,8 +293,33 @@ bifrost.use(Bifrost.createRateLimitRune({ points: 100, duration: 60, trustProxy:
 | Rune | Gesetzte Response-Header |
 |---|---|
 | `createStaticRune` | `ETag`, `Content-Type`, `Content-Length`, `COEP`, `COOP` |
+| `createCorsRune` | `Access-Control-Allow-*`, `Access-Control-Expose-Headers` |
 | `createSecurityHeadersRune` | `CSP`, `HSTS`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` |
 | `createRateLimitRune` | `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` |
+
+---
+
+## CORS
+
+Die eingebaute CORS-Rune ist hochflexibel und kümmert sich vollautomatisch um `OPTIONS`-Preflights, `Vary: Origin`-Caching und die Absicherung von Credentials-Konflikten.
+
+```js
+// In app.startup() konfigurieren
+await app.startup({
+    cors: {
+        origin: ['https://frontend.de', 'http://localhost:3000'],
+        credentials: true, // Erlaubt Cookies & Authorization-Header
+        methods: 'GET,POST,PUT,DELETE',
+        maxAge: 86400      // Preflight-Ergebnis im Browser für 24h cachen
+    }
+});
+```
+
+**Unterstützte Werte für `origin`:**
+- `'*'`: Erlaubt Anfragen von überall (Standard).
+- `true`: Reflektiert immer den anfragenden Origin (Dynamische Erlaubnis).
+- `['https://a.de', 'https://b.de']`: Array von explizit erlaubten Domains.
+- `async (reqOrigin, req) => { ... }`: Eigene Funktion zur Validierung (z.B. Check gegen eine Datenbank).
 
 ---
 

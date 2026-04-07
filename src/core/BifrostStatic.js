@@ -51,6 +51,90 @@ export class BifrostStatic {
 		};
 	}
 
+	/**
+	 * CORS-Rune — Setzt Cross-Origin Resource Sharing Header und behandelt OPTIONS-Preflights.
+	 * 
+	 * @param {object} [$options]
+	 * @param {string|string[]|boolean|Function} [$options.origin] Erlaubte Origins (Standard: '*')
+	 * @param {string|string[]} [$options.methods] Erlaubte Methoden (Standard: 'GET,HEAD,PUT,PATCH,POST,DELETE')
+	 * @param {string|string[]} [$options.allowedHeaders] Erlaubte Request-Header
+	 * @param {string|string[]} [$options.exposedHeaders] Header, die der Client lesen darf
+	 * @param {boolean} [$options.credentials] Cookies/Auth-Header zulassen (Standard: false)
+	 * @param {number} [$options.maxAge] Cache-Dauer für Preflight-Requests in Sekunden
+	 * @param {number} [$options.optionsSuccessStatus] HTTP-Status für erfolgreichen Preflight (Standard: 204)
+	 */
+	static createCorsRune($options = {}) {
+		const {
+			origin = '*',
+			methods = 'GET,HEAD,PUT,PATCH,POST,DELETE',
+			allowedHeaders,
+			exposedHeaders,
+			credentials = false,
+			maxAge,
+			optionsSuccessStatus = 204
+		} = $options;
+
+		return async (req, res, next) => {
+			const requestOrigin = req.headers.origin;
+			let allowOrigin = '';
+
+			// Origin-Ermittlung
+			if (origin === '*') {
+				allowOrigin = '*';
+			} else if (typeof origin === 'string') {
+				allowOrigin = origin;
+			} else if (Array.isArray(origin)) {
+				if (origin.includes(requestOrigin)) allowOrigin = requestOrigin;
+			} else if (typeof origin === 'function') {
+				allowOrigin = await origin(requestOrigin, req);
+			} else if (origin === true) {
+				allowOrigin = requestOrigin || '*';
+			}
+
+			// CORS-Spezifikation: Wildcard (*) und Credentials (true) dürfen nicht kombiniert werden.
+			// Browser werfen sonst einen harten Fehler. Wir beheben das automatisch, 
+			// indem wir stattdessen den Request-Origin dynamisch reflektieren.
+			if (allowOrigin === '*' && credentials) {
+				allowOrigin = requestOrigin || '*';
+			}
+
+			// WICHTIG: Bei dynamischen Origins muss der Cache (Browser/CDN) wissen, 
+			// dass sich die Antwort je nach "Origin"-Header des Clients ändern kann.
+			if (origin !== '*') {
+				const vary = res.getHeader('Vary') || '';
+				if (!vary.includes('Origin')) res.setHeader('Vary', vary ? `${vary}, Origin` : 'Origin');
+			}
+
+			// Header setzen
+			if (allowOrigin) res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+			if (credentials) res.setHeader('Access-Control-Allow-Credentials', 'true');
+			if (exposedHeaders) res.setHeader('Access-Control-Expose-Headers', Array.isArray(exposedHeaders) ? exposedHeaders.join(',') : exposedHeaders);
+
+			// Preflight-Logik (OPTIONS)
+			if (req.method === 'OPTIONS') {
+				res.setHeader('Access-Control-Allow-Methods', Array.isArray(methods) ? methods.join(',') : methods);
+
+				const reqHeaders = req.headers['access-control-request-headers'];
+				if (reqHeaders) {
+					res.setHeader('Access-Control-Allow-Headers', reqHeaders);
+				} else if (allowedHeaders) {
+					res.setHeader('Access-Control-Allow-Headers', Array.isArray(allowedHeaders) ? allowedHeaders.join(',') : allowedHeaders);
+				}
+
+				if (maxAge !== undefined && maxAge !== null) {
+					res.setHeader('Access-Control-Max-Age', String(maxAge));
+				}
+
+				// Preflight direkt beantworten und Kette abbrechen
+				res.writeHead(optionsSuccessStatus, { 'Content-Length': '0' });
+				res.end();
+				return;
+			}
+
+			await next();
+		};
+	}
+
 	static createStaticRune( $rootDir ) {
 		// Absoluter, kanonischer Wurzelpfad — einmalig berechnet
 		const rootResolved = resolve(process.cwd(), $rootDir);

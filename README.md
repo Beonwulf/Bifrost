@@ -48,8 +48,10 @@ await app.run();
   - [Functional routes](#functional-routes)
   - [BBController](#bbcontroller)
 - [Middleware (Runes)](#middleware-runes)
+- [CORS](#cors)
 - [WebSockets](#websockets)
 - [SSL / HTTPS](#ssl--https)
+- [Logging](#logging)
 - [Template Engine — Galdr](./src/template/README.md)
 - [Service Registry](#service-registry)
 - [Error Handling](#error-handling)
@@ -71,6 +73,9 @@ BifrostApp.setHost('0.0.0.0');
 BifrostApp.setStatic('public');
 BifrostApp.enableBodyParser();
 BifrostApp.enableSocket();
+BifrostApp.enableCors({ origin: '*' });
+BifrostApp.enableLogging({ level: 'info', file: true });
+BifrostApp.enableSessions({ duration: 3600 });
 BifrostApp.enableSSL();           // Self-signed certificate (auto-generated)
 // BifrostApp.enableSSL(key, cert) // Custom certificate
 ```
@@ -85,6 +90,9 @@ const { app, bifrost, io, router } = await app.startup({
     socket:          false,
     static:          'public',   // folder for static files
     bodyParser:      true,
+    cors:            true,       // Enable standard CORS
+    sessions:        { duration: 3600 }, // In-Memory Sessions
+    logging:         { level: 'info', file: true }, // File logger
     compression:     false,
     responseHelpers: true,       // res.json() / res.error()
 });
@@ -273,6 +281,12 @@ bifrost.use(Bifrost.createSecurityHeadersRune({
     hstsMaxAge: 31_536_000,
 }));
 
+// CORS — Handles cross-origin requests & OPTIONS preflights
+bifrost.use(Bifrost.createCorsRune({
+    origin: ['https://frontend.com'],
+    credentials: true
+}));
+
 // Rate limiting — Fixed Window per IP, no external package required
 // trustProxy: true when behind nginx/Caddy (reads X-Forwarded-For)
 bifrost.use(Bifrost.createRateLimitRune({ points: 100, duration: 60 }));
@@ -282,8 +296,33 @@ bifrost.use(Bifrost.createRateLimitRune({ points: 100, duration: 60, trustProxy:
 | Rune | Response Headers set |
 |---|---|
 | `createStaticRune` | `ETag`, `Content-Type`, `Content-Length`, `COEP`, `COOP` |
+| `createCorsRune` | `Access-Control-Allow-*`, `Access-Control-Expose-Headers` |
 | `createSecurityHeadersRune` | `CSP`, `HSTS`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` |
 | `createRateLimitRune` | `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` |
+
+---
+
+## CORS
+
+The built-in CORS Rune handles cross-origin requests, `OPTIONS` preflights, and `Vary: Origin` caching automatically.
+
+```js
+// Configure in app.startup()
+await app.startup({
+    cors: {
+        origin: ['https://frontend.com', 'http://localhost:3000'],
+        credentials: true, // Allow cookies & authorization headers
+        methods: 'GET,POST,PUT,DELETE',
+        maxAge: 86400      // Cache preflight response for 24h
+    }
+});
+```
+
+**Supported values for `origin`:**
+- `'*'`: Allow all origins (default).
+- `true`: Always reflect the requesting origin dynamically.
+- `['https://a.com', 'https://b.com']`: Array of explicitly allowed domains.
+- `async (reqOrigin, req) => { ... }`: Custom validation function.
 
 ---
 
@@ -327,6 +366,22 @@ BifrostApp.enableSSL(
     readFileSync('./certs/cert.pem')
 );
 await app.startup();
+```
+
+---
+
+## Logging
+
+Bifröst includes a fast logger with built-in **log rotation** (daily file stream & automatic gzip compression) — zero external dependencies.
+
+```js
+await app.startup({
+    logging: { level: 'info', file: true, maxDays: 30 } // Rotates daily into /logs
+});
+
+// Available everywhere in your controllers:
+this.app.log.info('Something happened');
+this.app.log.error('An error occurred', new Error('...'));
 ```
 
 ---

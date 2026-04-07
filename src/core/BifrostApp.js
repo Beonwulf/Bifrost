@@ -37,6 +37,7 @@ export class BifrostApp {
 		responseHelpers: true,
 		locales:         null,
 		securityHeaders: false, // true oder Options-Objekt übergeben
+		cors:            false, // true oder Options-Objekt übergeben
 		rateLimit:       false, // true oder { points, duration, trustProxy } übergeben
 		sessions:        false, // true oder Options-Objekt { name, duration, secure } übergeben
 		logging:         { level: 'info', file: false }, // Logger Defaults
@@ -68,6 +69,7 @@ export class BifrostApp {
 	static enableResponseHelpers() { BifrostApp.cfg.responseHelpers = true; }
 	static disableResponseHelpers(){ BifrostApp.cfg.responseHelpers = false; }
 	static enableSecurityHeaders($options = {}) { BifrostApp.cfg.securityHeaders = $options; }
+	static enableCors($options = {})     { BifrostApp.cfg.cors = $options; }
 	static enableSessions($options = {}) { BifrostApp.cfg.sessions = $options; }
 	static enableLogging($options = {})  { BifrostApp.cfg.logging = { ...BifrostApp.cfg.logging, ...$options }; }
 	static enableSSL($key, $cert)  {
@@ -203,12 +205,15 @@ export class BifrostApp {
 		// Locale-Prefix-Routing konfigurieren
 		if (cfg.locales) this.#bifrost.setLocales(cfg.locales);
 
-		// Runen registrieren — Reihenfolge: Logger → Security → RateLimit → ResponseHelpers → Body → Static
+		// Runen registrieren — Reihenfolge: Logger → Security → CORS → RateLimit → ResponseHelpers → Body → Static
 		if (cfg.logging) {
 			this.#bifrost.use(Bifrost.createLoggerRune(this.#log));
 		}
 		if (cfg.securityHeaders) this.#bifrost.use(Bifrost.createSecurityHeadersRune(
 			typeof cfg.securityHeaders === 'object' ? cfg.securityHeaders : {}
+		));
+		if (cfg.cors)            this.#bifrost.use(Bifrost.createCorsRune(
+			typeof cfg.cors === 'object' ? cfg.cors : {}
 		));
 		if (cfg.rateLimit)       this.#bifrost.use(Bifrost.createRateLimitRune(
 			typeof cfg.rateLimit === 'object' ? cfg.rateLimit : {}
