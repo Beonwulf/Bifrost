@@ -48,6 +48,7 @@ await app.run();
   - [Functional routes](#functional-routes)
   - [BBController](#bbcontroller)
 - [Forms & Validation](#forms--validation)
+- [CLI & Generators](#cli--generators)
 - [Middleware (Runes)](#middleware-runes)
 - [File Uploads](#file-uploads)
 - [CORS](#cors)
@@ -551,6 +552,8 @@ Without custom handlers the built-in Galdr templates (`404.galdr.html` / `500.ga
 bifrost/
 ├── index.js                        ← Public API
 ├── package.json
+├── bin/
+│   └── bifrost.js                  ← CLI Tool
 └── src/
     ├── core/
     │   ├── Bifrost.js              ← HTTP/HTTPS server
@@ -567,6 +570,26 @@ bifrost/
     │   └── routes.js               ← Built-in 404/500 handlers
     └── utils/
         └── mimeTypes.js
+```
+
+---
+
+## CLI & Generators
+
+Bifröst comes with a built-in CLI tool for rapid project scaffolding and code generation.
+
+```bash
+# Initialize a new project (creates mvc/ structure, app.js, etc.)
+npx bifrost init
+
+# Generate a new controller (in mvc/controllers/)
+npx bifrost make:controller admin/Dashboard
+
+# Generate a new form class (in mvc/forms/)
+npx bifrost make:form Contact
+
+# Generate a new view template (in mvc/views/)
+npx bifrost make:view contact
 ```
 
 ---

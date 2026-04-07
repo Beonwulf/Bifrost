@@ -5,6 +5,12 @@ Alle bemerkenswerten Änderungen an diesem Projekt werden in dieser Datei dokume
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 und dieses Projekt folgt dem [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-04-07
+
+### Hinzugefügt (Added)
+- **CLI Code-Generatoren**: Neue CLI-Befehle `npx bifrost make:controller <Name>`, `npx bifrost make:form <Name>` und `npx bifrost make:view <Name>` zum schnellen Erstellen von Boilerplate-Code.
+- **MVC-Ordnerstruktur**: Der Starter-Code (`npx bifrost init`) und die Generatoren verwenden nun standardmäßig eine aufgeräumte `mvc/`-Ordnerstruktur (`mvc/controllers`, `mvc/views`, `mvc/forms`).
+
 ## [0.16.0] - 2026-04-07
 
 ### Hinzugefügt (Added)

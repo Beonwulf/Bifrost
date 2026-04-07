@@ -57,10 +57,10 @@ const SCAFFOLD = {
 		'public',
 		'public/css',
 		'public/js',
-		'views',
-		'views/layouts',
-		'views/partials',
-		'controllers',
+		'mvc/views',
+		'mvc/views/layouts',
+		'mvc/views/partials',
+		'mvc/controllers',
 		'i18n/de',
 		'i18n/en',
 		'i18n/fr',
@@ -72,7 +72,7 @@ const SCAFFOLD = {
 
 		// ── Layouts ──────────────────────────────────────────────────────────
 
-		'views/layouts/base.galdr.html': `<!DOCTYPE html>
+		'mvc/views/layouts/base.galdr.html': `<!DOCTYPE html>
 <html lang="de">
 <head>
 	{% partial head %}
@@ -94,7 +94,7 @@ const SCAFFOLD = {
 
 		// ── Partials ─────────────────────────────────────────────────────────
 
-		'views/partials/head.galdr.html': `<meta charset="UTF-8">
+		'mvc/views/partials/head.galdr.html': `<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ title }}{% if title %} – {% endif %}Bifröst App</title>
 {% partial seo %}
@@ -102,7 +102,7 @@ const SCAFFOLD = {
 <link rel="stylesheet" href="/css/flags.css">
 `,
 
-		'views/partials/footer.galdr.html': `<footer class="footer">
+		'mvc/views/partials/footer.galdr.html': `<footer class="footer">
 	<div class="footer-inner">
 		<span>© {{ year | default:'2025' }} Bifröst App</span>
 		{% include "nav" with { items: _nav.footer, class: 'footer-links' } %}
@@ -110,7 +110,7 @@ const SCAFFOLD = {
 </footer>
 `,
 
-		'views/partials/header.galdr.html': `<header class="site-header">
+		'mvc/views/partials/header.galdr.html': `<header class="site-header">
 	<nav class="nav">
 		<a href="{% url '/' %}" class="nav-brand">🌈 Bifröst</a>
 		{% include "nav" with { items: _nav.main } %}
@@ -120,7 +120,7 @@ const SCAFFOLD = {
 </header>
 `,
 
-		'views/partials/flash.galdr.html': `{% if $flash %}
+		'mvc/views/partials/flash.galdr.html': `{% if $flash %}
 <div class="flash flash--{{ $flash.type }}">
 	{{ $flash.message }}
 </div>
@@ -129,10 +129,10 @@ const SCAFFOLD = {
 
 		// ── Views ─────────────────────────────────────────────────────────────
 
-		'views/home.galdr.html': `{% layout "base" %}
+		'mvc/views/home.galdr.html': `{% layout "base" %}
 <section class="hero">
 	<h1>Willkommen bei Bifröst ✨</h1>
-	<p>Dein Server läuft. Bearbeite <code>controllers/HomeController.js</code> um loszulegen.</p>
+	<p>Dein Server läuft. Bearbeite <code>mvc/controllers/HomeController.js</code> um loszulegen.</p>
 	<div class="flex justify-center gap-md mt-lg">
 		<a href="/about" class="btn btn-primary btn-lg">Mehr erfahren</a>
 		<a href="https://github.com" class="btn btn-outline-light btn-lg">GitHub</a>
@@ -166,7 +166,7 @@ const SCAFFOLD = {
 {% endlayout %}
 `,
 
-		'views/features.galdr.html': `{% layout "base" %}
+		'mvc/views/features.galdr.html': `{% layout "base" %}
 {% block scripts %}
 <script src="/js/features.js" defer></script>
 {% endblock %}
@@ -511,7 +511,7 @@ const msg = 'Bifröst';</code></pre>
 {% endlayout %}
 `,
 
-		'views/galdr.galdr.html': `{% layout "base" %}
+		'mvc/views/galdr.galdr.html': `{% layout "base" %}
 {% block scripts %}
 <script src="/js/features.js" defer></script>
 {% endblock %}
@@ -717,7 +717,7 @@ Galdr.registerFilter('slug', ($v) =&gt;
 {% endlayout %}
 `,
 
-		'views/about.galdr.html': `{% layout "base" %}
+		'mvc/views/about.galdr.html': `{% layout "base" %}
 <section>
 	<h1>Über uns</h1>
 	<p class="text-lg text-muted">Hier steht der Text für die Über-uns-Seite.</p>
@@ -727,7 +727,7 @@ Galdr.registerFilter('slug', ($v) =&gt;
 {% endlayout %}
 `,
 
-		'views/imprint.galdr.html': `{% layout "base" %}
+		'mvc/views/imprint.galdr.html': `{% layout "base" %}
 <section>
 	<h1>Impressum</h1>
 	<p class="text-muted">Angaben gemäß § 5 TMG</p>
@@ -745,7 +745,7 @@ Galdr.registerFilter('slug', ($v) =&gt;
 
 		// ── Controllers ──────────────────────────────────────────────────────
 
-		'controllers/HomeController.js': `import { BBController } from 'bifrost';
+		'mvc/controllers/HomeController.js': `import { BBController } from 'bifrost';
 
 export default class HomeController extends BBController {
 	static path    = '/';
@@ -758,7 +758,7 @@ export default class HomeController extends BBController {
 }
 `,
 
-		'controllers/AboutController.js': `import { BBController } from 'bifrost';
+		'mvc/controllers/AboutController.js': `import { BBController } from 'bifrost';
 
 export default class AboutController extends BBController {
 	static path    = '/about';
@@ -771,7 +771,7 @@ export default class AboutController extends BBController {
 }
 `,
 
-		'controllers/FeaturesController.js': `import { BBController } from 'bifrost';
+		'mvc/controllers/FeaturesController.js': `import { BBController } from 'bifrost';
 
 export default class FeaturesController extends BBController {
 	static path    = '/features';
@@ -797,7 +797,7 @@ export default class FeaturesController extends BBController {
 }
 `,
 
-		'controllers/GaldrController.js': `import { BBController } from 'bifrost';
+		'mvc/controllers/GaldrController.js': `import { BBController } from 'bifrost';
 
 export default class GaldrController extends BBController {
 	static path    = '/galdr';
@@ -822,7 +822,7 @@ export default class GaldrController extends BBController {
 }
 `,
 
-		'controllers/ImprintController.js': `import { BBController } from 'bifrost';
+		'mvc/controllers/ImprintController.js': `import { BBController } from 'bifrost';
 
 export default class ImprintController extends BBController {
 	static path    = '/imprint';
@@ -834,7 +834,7 @@ export default class ImprintController extends BBController {
 }
 `,
 
-		'controllers/LangController.js': `import { BBController } from 'bifrost';
+		'mvc/controllers/LangController.js': `import { BBController } from 'bifrost';
 
 const SUPPORTED = ['de', 'en', 'fr', 'es', 'it'];
 
@@ -2104,9 +2104,9 @@ const __dir = fileURLToPath(new URL('.', import.meta.url));
 const app   = new BifrostApp();
 
 BifrostApp.configureViews({
-	views:    join(__dir, 'views'),
-	layouts:  join(__dir, 'views/layouts'),
-	partials: join(__dir, 'views/partials'),
+	views:    join(__dir, 'mvc/views'),
+	layouts:  join(__dir, 'mvc/views/layouts'),
+	partials: join(__dir, 'mvc/views/partials'),
 	cache:    process.env.NODE_ENV === 'production',
 });
 
@@ -2126,7 +2126,7 @@ await app.startup({
 	rateLimit:       { points: 100, duration: 60 }, // trustProxy: true hinter nginx/Caddy
 });
 
-await app.loadControllers(join(__dir, 'controllers'));
+await app.loadControllers(join(__dir, 'mvc/controllers'));
 
 // NavRegistry — Footer-Links registrieren
 NavRegistry.register('footer', { slug: '/imprint', lang: 'nav.imprint', order: 1 });
@@ -2260,7 +2260,7 @@ async function cmdFlags() {
 
 	head('Fertig');
 	console.log(`
-   Einbinden in \x1b[36mviews/partials/head.galdr.html\x1b[0m:
+   Einbinden in \x1b[36mmvc/views/partials/head.galdr.html\x1b[0m:
 
      \x1b[36m<link rel="stylesheet" href="/css/flags.css">\x1b[0m
 
@@ -2338,6 +2338,86 @@ async function cmdInit() {
 }
 
 
+// ── Code-Generatoren (make:*) ────────────────────────────────────────────────
+
+function getMakeName() {
+	const name = args[1];
+	if (!name) {
+		error('Bitte einen Namen angeben. (z. B. "User" oder "admin/Dashboard")');
+		process.exit(1);
+	}
+	return name;
+}
+
+async function cmdMakeController() {
+	const rawName = getMakeName();
+	// Erlaube auch Unterordner wie 'admin/User'
+	const parts = rawName.split('/');
+	const name = parts.pop();
+	const className = name.charAt(0).toUpperCase() + name.slice(1);
+	const subDir = parts.length > 0 ? '/' + parts.join('/') : '';
+	const pathName = rawName.toLowerCase();
+
+	const relDir = `mvc/controllers${subDir}`;
+	const fileName = `${relDir}/${className}Controller.js`;
+
+	const content = `import { BBController } from 'bifrost';
+
+export default class ${className}Controller extends BBController {
+	static path    = '/${pathName}';
+	static methods = ['get'];
+
+	async get() {
+		await this.render('${pathName}/index', { title: '${className}' });
+	}
+}
+`;
+	head(`Generiere Controller: ${className}Controller`);
+	await createDir(relDir);
+	await createFile(fileName, content);
+}
+
+async function cmdMakeForm() {
+	const rawName = getMakeName();
+	const parts = rawName.split('/');
+	const name = parts.pop();
+	const className = name.charAt(0).toUpperCase() + name.slice(1);
+	const subDir = parts.length > 0 ? '/' + parts.join('/') : '';
+
+	const relDir = `mvc/forms${subDir}`;
+	const fileName = `${relDir}/${className}Form.js`;
+
+	const content = `import { BBForm } from 'bifrost';
+
+export class ${className}Form extends BBForm {
+	fields() {
+		return {
+			name:  { type: 'text', label: 'Name', rules: ['required'] },
+			email: { type: 'email', label: 'E-Mail', rules: ['required', 'email'] }
+		};
+	}
+}
+`;
+	head(`Generiere Form: ${className}Form`);
+	await createDir(relDir);
+	await createFile(fileName, content);
+}
+
+async function cmdMakeView() {
+	const rawName = getMakeName();
+	const parts = rawName.split('/');
+	const name = parts.pop();
+	const subDir = parts.length > 0 ? '/' + parts.join('/') : '';
+
+	const relDir = `mvc/views${subDir}`;
+	const fileName = `${relDir}/${name.toLowerCase()}.galdr.html`;
+
+	const content = `{% layout "base" %}\n\n<h1>${name.charAt(0).toUpperCase() + name.slice(1)}</h1>\n<p>Hier entsteht die neue View.</p>\n\n{% endlayout %}\n`;
+	head(`Generiere View: ${fileName}`);
+	await createDir(relDir);
+	await createFile(fileName, content);
+}
+
 // ── Dispatch ──────────────────────────────────────────────────────────────────
 
 switch (command) {
@@ -2347,6 +2427,18 @@ switch (command) {
 
 	case 'flags':
 		await cmdFlags();
+		break;
+
+	case 'make:controller':
+		await cmdMakeController();
+		break;
+
+	case 'make:form':
+		await cmdMakeForm();
+		break;
+
+	case 'make:view':
+		await cmdMakeView();
 		break;
 
 	default:
@@ -2361,5 +2453,9 @@ Verfügbare Befehle:
   \x1b[36mbifrost flags\x1b[0m                        flags.css mit 30 Standard-Flaggen generieren
   \x1b[36mbifrost flags --codes de,en,fr,es\x1b[0m   Nur gewählte ISO-Ländercodes
   \x1b[36mbifrost flags --out public/css/flags.css\x1b[0m  Ausgabepfad überschreiben
+
+  \x1b[36mbifrost make:controller <Name>\x1b[0m       Controller in mvc/controllers generieren
+  \x1b[36mbifrost make:form <Name>\x1b[0m             Form-Klasse in mvc/forms generieren
+  \x1b[36mbifrost make:view <Name>\x1b[0m             View-Template in mvc/views generieren
 `);
 }
