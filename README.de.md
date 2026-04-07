@@ -54,6 +54,7 @@ await app.run();
 - [WebSockets](#websockets)
 - [SSL / HTTPS](#ssl--https)
 - [Logging](#logging)
+- [API Testing (app.inject)](#api-testing-appinject)
 - [Template Engine — Galdr](./src/template/README.de.md)
 - [Service-Registry](#service-registry)
 - [Fehlerbehandlung](#fehlerbehandlung)
@@ -572,6 +573,32 @@ npx bifrost make:form Contact
 
 # View-Template erstellen (in mvc/views/)
 npx bifrost make:view contact
+```
+
+---
+
+## API Testing (app.inject)
+
+Bifröst beinhaltet einen nativen Request-Injector für automatisierte Tests (z. B. mit Jest, Mocha oder dem Node.js Test-Runner). Dieser simuliert den kompletten HTTP-Lebenszyklus direkt im Arbeitsspeicher, ohne einen Port zu binden oder Netzwerk-Traffic zu erzeugen.
+
+```js
+import test from 'node:test';
+import assert from 'node:assert';
+import { BifrostApp } from 'bifrost';
+
+test('User API', async () => {
+    const app = new BifrostApp();
+    await app.startup(); // Runen und Controller müssen geladen sein
+
+    const response = await app.inject({
+        method: 'POST',
+        url: '/api/users',
+        body: { name: 'Thor' }
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(response.json().success, true);
+});
 ```
 
 ---

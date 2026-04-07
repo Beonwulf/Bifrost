@@ -3,6 +3,7 @@ import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
 import selfsigned from 'selfsigned';
+import { Readable, Writable } from 'node:stream';
 import { Server as SocketServer } from 'socket.io';
 import { BifrostStatic } from './BifrostStatic.js';
 
@@ -170,6 +171,63 @@ export class Bifrost extends BifrostStatic {
 		return this.#server;
 	}
 
+	/**
+	 * Simuliert einen HTTP-Request im Arbeitsspeicher (Memory-Injection).
+	 * Perfekt für extrem schnelle API-Tests ohne Netzwerk-Overhead.
+	 *
+	 * @param {object} $options
+	 * @param {string} $options.method  HTTP-Methode (z.B. 'GET', 'POST')
+	 * @param {string} $options.url     Der Pfad (z.B. '/api/users')
+	 * @param {object} [$options.headers] HTTP-Header
+	 * @param {any}    [$options.body]  Body-Payload (Objekte werden als JSON gesendet)
+	 * @returns {Promise<object>} { statusCode, headers, rawBody, body, json() }
+	 */
+	async inject($options = {}) {
+		return new Promise((resolve) => {
+			// 1. Mock Request (Readable Stream)
+			const req = new Readable({ read() {} });
+			req.method = ($options.method || 'GET').toUpperCase();
+			req.url = $options.url || '/';
+			req.headers = { host: 'localhost', ...($options.headers || {}) };
+			req.socket = { remoteAddress: '127.0.0.1', encrypted: false };
+
+			if ($options.body) {
+				const isObj = typeof $options.body === 'object' && !Buffer.isBuffer($options.body);
+				const payload = isObj ? JSON.stringify($options.body) : String($options.body);
+				
+				if (!req.headers['content-type'] && isObj) req.headers['content-type'] = 'application/json';
+				req.headers['content-length'] = Buffer.byteLength(payload);
+				req.push(payload);
+			}
+			req.push(null); // EOF (End of Stream)
+
+			// 2. Mock Response (Writable Stream)
+			const res = new Writable({ write(c, e, cb) { res.bodyChunks.push(Buffer.from(c)); cb(); } });
+			res.statusCode = 200;
+			res._headers = {};
+			res.bodyChunks = [];
+			res.writableEnded = false;
+
+			res.setHeader = function(n, v) { this._headers[n.toLowerCase()] = v; };
+			res.getHeader = function(n) { return this._headers[n.toLowerCase()]; };
+			res.removeHeader = function(n) { delete this._headers[n.toLowerCase()]; };
+			res.writeHead = function(status, headers = {}) { this.statusCode = status; for (const [k, v] of Object.entries(headers)) this.setHeader(k, v); };
+
+			// Wenn res.end() im Controller/Rune aufgerufen wird, lösen wir unser Promise auf!
+			res.end = function(chunk, encoding, callback) {
+				if (this.writableEnded) return;
+				if (chunk && typeof chunk !== 'function') this.bodyChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+				this.writableEnded = true;
+				this.emit('finish'); // Wichtig für den Logger!
+
+				const rawBody = Buffer.concat(this.bodyChunks);
+				resolve({ statusCode: this.statusCode, headers: this._headers, rawBody, body: rawBody.toString('utf8'), json: () => { try { return JSON.parse(rawBody.toString('utf8')); } catch { return null; } } });
+			};
+
+			// 3. Request in die Bifröst Pipeline werfen
+			this.#handleRequest(req, res);
+		});
+	}
 
 	/**
 	 * Aktiviert die Brücke (Startet den Server)

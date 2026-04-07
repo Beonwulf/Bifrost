@@ -171,6 +171,17 @@ export class BifrostApp {
 		return Router.loadControllers(this.#bifrost, this, $dir);
 	}
 
+	// ── Testing Utilities ─────────────────────────────────────────────────────
+
+	/**
+	 * Simuliert einen HTTP-Request im Arbeitsspeicher (für automatisierte Tests).
+	 * @param {object} $options { method, url, headers, body }
+	 * @returns {Promise<object>} { statusCode, headers, body, json() }
+	 */
+	async inject($options) {
+		if (!this.#bifrost) await this.startup();
+		return this.#bifrost.inject($options);
+	}
 
 	// ── Template Engine ───────────────────────────────────────────────────────
 

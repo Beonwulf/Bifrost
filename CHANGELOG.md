@@ -5,6 +5,11 @@ Alle bemerkenswerten Änderungen an diesem Projekt werden in dieser Datei dokume
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 und dieses Projekt folgt dem [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] - 2026-04-07
+
+### Hinzugefügt (Added)
+- **API Testing Utilities**: Neue Methode `app.inject()` für extrem schnelle API-Tests im Arbeitsspeicher, ohne einen echten Port binden oder Netzwerk-Traffic generieren zu müssen.
+
 ## [0.18.0] - 2026-04-07
 
 ### Hinzugefügt (Added)
