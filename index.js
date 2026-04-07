@@ -9,6 +9,7 @@ export { BifrostApp }                    from './src/core/BifrostApp.js';
 export { Bifrost }                       from './src/core/Bifrost.js';
 export { BifrostStatic }                 from './src/core/BifrostStatic.js';
 export { BBController }                  from './src/routing/BBController.js';
+export { BBForm }                        from './src/core/BBForm.js';
 export { Router }                        from './src/routing/Router.js';
 export { NavRegistry }                   from './src/routing/NavRegistry.js';
 export { Galdr, BUILTIN_TEMPLATES }      from './src/template/Galdr.js';

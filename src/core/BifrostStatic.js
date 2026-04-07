@@ -568,4 +568,52 @@ export class BifrostStatic {
 		};
 	}
 
+	/**
+	 * CSRF-Rune — Schützt vor Cross-Site Request Forgery.
+	 * Benötigt die Session-Rune und BodyParser-Rune. Generiert ein Token in req.session._csrf.
+	 * Blockiert mutierende Anfragen (POST, PUT, DELETE, PATCH) ohne gültiges Token.
+	 */
+	static createCsrfRune($options = {}) {
+		const ignorePaths = $options.ignore || [];
+
+		return async (req, res, next) => {
+			if (!req.session) {
+				console.warn('⚠️ CSRF-Rune benötigt die Session-Rune (muss davor registriert werden).');
+				return await next();
+			}
+
+			// 1. Token generieren, falls nicht vorhanden
+			if (!req.session._csrf) {
+				req.session._csrf = crypto.randomBytes(32).toString('hex');
+			}
+
+			// 2. Unkritische Methoden durchlassen
+			if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+				return await next();
+			}
+
+			// 3. Ausnahmen prüfen (z. B. /api/ für zustandslose JWT-APIs)
+			for (const p of ignorePaths) {
+				if (req.url.startsWith(p)) return await next();
+			}
+
+			// 4. Token verifizieren (aus Body oder Header)
+			const serverToken = req.session._csrf;
+			const submitted = (req.body && req.body._csrf) || req.headers['x-csrf-token'];
+
+			let isValid = false;
+			if (submitted && typeof submitted === 'string' && submitted.length === serverToken.length) {
+				// timingSafeEqual schützt davor, dass Hacker das Token Zeichen für Zeichen erraten
+				isValid = crypto.timingSafeEqual(Buffer.from(submitted), Buffer.from(serverToken));
+			}
+
+			if (!isValid) {
+				res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+				res.end('403 Forbidden - Ungültiges oder fehlendes CSRF-Token.');
+				return;
+			}
+
+			await next();
+		};
+	}
 }

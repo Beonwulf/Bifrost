@@ -40,6 +40,7 @@ export class BifrostApp {
 		cors:            false, // true oder Options-Objekt übergeben
 		rateLimit:       false, // true oder { points, duration, trustProxy } übergeben
 		sessions:        false, // true oder Options-Objekt { name, duration, secure } übergeben
+		csrf:            false, // true oder Options-Objekt { ignore: ['/api'] } übergeben
 		logging:         { level: 'info', file: false }, // Logger Defaults
 	};
 
@@ -71,6 +72,7 @@ export class BifrostApp {
 	static enableSecurityHeaders($options = {}) { BifrostApp.cfg.securityHeaders = $options; }
 	static enableCors($options = {})     { BifrostApp.cfg.cors = $options; }
 	static enableSessions($options = {}) { BifrostApp.cfg.sessions = $options; }
+	static enableCsrf($options = {})     { BifrostApp.cfg.csrf = $options; }
 	static enableLogging($options = {})  { BifrostApp.cfg.logging = { ...BifrostApp.cfg.logging, ...$options }; }
 	static enableSSL($key, $cert)  {
 		BifrostApp.cfg.ssl = true;
@@ -224,6 +226,9 @@ export class BifrostApp {
 		if (cfg.responseHelpers) this.#bifrost.use(Bifrost.createResponseHelperRune());
 		if (cfg.bodyParser)      this.#bifrost.use(Bifrost.createBodyParserRune(
 			typeof cfg.bodyParser === 'object' ? cfg.bodyParser : {}
+		));
+		if (cfg.csrf)            this.#bifrost.use(Bifrost.createCsrfRune(
+			typeof cfg.csrf === 'object' ? cfg.csrf : {}
 		));
 		if (cfg.static)          this.#bifrost.use(Bifrost.createStaticRune(cfg.static));
 

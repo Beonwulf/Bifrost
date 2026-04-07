@@ -45,9 +45,11 @@ await app.run();
 - [Routing](#routing)
   - [Funktionale Routen](#funktionale-routen)
   - [BBController](#bbcontroller)
+- [Formulare & Validierung](#formulare--validierung)
 - [Middleware (Runen)](#middleware-runen)
 - [Datei-Uploads](#datei-uploads)
 - [CORS](#cors)
+- [CSRF-Schutz](#csrf-schutz)
 - [WebSockets](#websockets)
 - [SSL / HTTPS](#ssl--https)
 - [Logging](#logging)
@@ -245,6 +247,51 @@ export default class PostController extends BBController {
 
 ---
 
+---
+
+## Formulare & Validierung
+
+Bifröst bietet eine integrierte `BBForm`-Klasse für Datenbindung, Filterung, Validierung und automatisches HTML-Rendering via Galdr.
+
+```js
+import { BBForm } from 'bifrost';
+
+export class ContactForm extends BBForm {
+    fields() {
+        return {
+            name:  { type: 'text', rules: ['required', 'min:3'] },
+            email: { type: 'email', rules: ['required', 'email'] },
+            agb:   { type: 'checkbox', rules: [(val) => val === true ? true : 'Bitte AGB akzeptieren.'] }
+        };
+    }
+}
+```
+
+Im Controller:
+```js
+const form = new ContactForm().withCsrf(this.req.session?._csrf);
+
+if (this.req.method === 'POST') {
+    form.bind(this.body);
+    if (form.isValid()) {
+        // form.values enthält die bereinigten Daten
+        return this.redirect('/success');
+    }
+}
+await this.render('contact', { form });
+```
+
+Im Galdr-Template:
+```html
+<form method="post">
+    {{{ form.renderCsrf() }}}
+    {{{ form.renderField('name') }}}
+    {{{ form.renderField('email') }}}
+    {{{ form.renderField('agb') }}}
+    <button type="submit" class="btn btn-primary">Senden</button>
+</form>
+```
+
 ## Middleware (Runen)
 
 Middleware-Funktionen werden als **Runen** bezeichnet. Eine Rune hat die Signatur `async (req, res, next) => void`.
@@ -389,6 +436,19 @@ await app.startup({
 - `async (reqOrigin, req) => { ... }`: Eigene Funktion zur Validierung (z.B. Check gegen eine Datenbank).
 
 ---
+
+---
+
+## CSRF-Schutz
+
+Aktiviere nativen Schutz vor Cross-Site Request Forgery (CSRF). Setzt die Session- und BodyParser-Runen voraus.
+
+```js
+await app.startup({
+    sessions: { duration: 3600 },
+    csrf: { ignore: ['/api/'] } // Zustandlose APIs ignorieren
+});
+```
 
 ## WebSockets
 

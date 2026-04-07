@@ -1,6 +1,6 @@
 {
 	"name": "bifrost",
-	"version": "0.15.0",
+	"version": "0.16.0",
 	"description": "Bifröst — Eigenständiges Node.js HTTP/HTTPS-Framework mit WebSocket, Template Engine und Controller-System.",
 	"type": "module",
 	"main": "index.js",

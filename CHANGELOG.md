@@ -5,6 +5,12 @@ Alle bemerkenswerten Änderungen an diesem Projekt werden in dieser Datei dokume
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 und dieses Projekt folgt dem [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-04-07
+
+### Hinzugefügt (Added)
+- **Formular-Verarbeitung (BBForm)**: Neue Basisklasse `BBForm` für strukturierte Formulare, Validierung (inkl. Custom Callbacks) und automatisches Galdr-Rendering.
+- **CSRF-Schutz**: Native CSRF-Rune (`app.startup({ csrf: { ignore: ['/api/'] } })`) zum Schutz vor Cross-Site Request Forgery, nahtlos integriert mit `BBForm` und Galdr.
+
 ## [0.15.0] - 2026-04-07
 
 ### Hinzugefügt (Added)
