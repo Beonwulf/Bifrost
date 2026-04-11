@@ -7,3 +7,10 @@ node_modules/
 TestApp/
 .env
 .DS_Store
+
+# Scaffold / generierte Verzeichnisse
+/public/
+/mvc/
+/i18n/
+/controllers/
+/views/

@@ -10,43 +10,14 @@
  *   npx bifrost flags --out public/css/flags.css
  */
 
-import { mkdir, writeFile, access } from 'node:fs/promises';
-import { join, dirname }            from 'node:path';
-import { createWriteStream }        from 'node:fs';
+import { cmdInit } from '../src/cli/init.js';
+import { cmdFlags } from '../src/cli/flags.js';
+import { cmdMakeController, cmdMakeForm, cmdMakeView } from '../src/cli/make.js';
 
 const args    = process.argv.slice(2);
 const command = args[0];
 const force   = args.includes('--force');
 const cwd     = process.cwd();
-
-
-// ── Hilfsfunktionen ───────────────────────────────────────────────────────────
-
-const ok    = ($msg) => console.log(`  \x1b[32m✔\x1b[0m  ${$msg}`);
-const skip  = ($msg) => console.log(`  \x1b[33m–\x1b[0m  ${$msg} \x1b[2m(bereits vorhanden, übersprungen)\x1b[0m`);
-const info  = ($msg) => console.log(`  \x1b[36mℹ\x1b[0m  ${$msg}`);
-const error = ($msg) => console.error(`  \x1b[31m✘\x1b[0m  ${$msg}`);
-const head  = ($msg) => console.log(`\n\x1b[1m${$msg}\x1b[0m`);
-
-async function exists($path) {
-	try { await access($path); return true; } catch { return false; }
-}
-
-async function createDir($rel) {
-	const full = join(cwd, $rel);
-	await mkdir(full, { recursive: true });
-	ok(`${$rel}/`);
-}
-
-async function createFile($rel, $content) {
-	const full = join(cwd, $rel);
-	if (!force && await exists(full)) {
-		skip($rel);
-		return;
-	}
-	await writeFile(full, $content, 'utf-8');
-	ok($rel);
-}
 
 
 // ── Scaffold-Definitionen ─────────────────────────────────────────────────────
@@ -98,7 +69,8 @@ const SCAFFOLD = {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ title }}{% if title %} – {% endif %}Bifröst App</title>
 {% partial seo %}
-<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/sz.css">
+<link rel="stylesheet" href="/css/szicons.css">
 <link rel="stylesheet" href="/css/flags.css">
 `,
 
@@ -914,8 +886,20 @@ export default class LangController extends BBController {
 
 		// ── Static Assets ─────────────────────────────────────────────────────
 
-		'public/css/app.css': `/* ============================================================
-   Bifröst UI — Eigenständiges CSS-Framework
+		'public/css/sz.css': `/* ============================================================
+   SZ CSS-Framework
+   Füge hier den Inhalt deiner sz.css ein!
+   ============================================================ */
+`,
+
+		'public/css/szicons.css': `/* ============================================================
+   SZ Icons
+   Füge hier den Inhalt deiner szicons.css ein!
+   ============================================================ */
+`,
+
+		'public/css/bifrost-ui.css': `/* ============================================================
+   Bifröst UI — Eigenständiges CSS-Framework (Optional)
    Optimiert für Galdr-Layouts: .container, .nav, .hero,
    .card, .btn, .form-group, .flash, .badge, .table, .footer
    ============================================================ */
@@ -2143,303 +2127,27 @@ await app.run();
 };
 
 
-// ── Command: flags ────────────────────────────────────────────────────────────
-
-/** Standard-Ländercodes wenn --codes nicht angegeben */
-const DEFAULT_FLAG_CODES = [
-	'de', 'at', 'ch', 'gb', 'us', 'fr', 'es', 'it', 'pt', 'nl',
-	'pl', 'ru', 'tr', 'jp', 'cn', 'kr', 'ar', 'se', 'dk', 'fi',
-	'no', 'ua', 'cz', 'ro', 'hr', 'sk', 'hu', 'bg', 'gr', 'eu',
-];
-
-const CDN_BASE = 'https://cdn.jsdelivr.net/npm/flag-icons@7/flags/4x3';
-
-/**
- * Konvertiert SVG-String in einen CSS data:URI-String (URL-kodiert, kein Base64).
- * Spart ~30% gegenüber Base64 und bleibt menschenlesbar.
- */
-function svgToDataUri($svg) {
-	const cleaned = $svg
-		.replace(/<!--[\s\S]*?-->/g, '')   // Kommentare entfernen
-		.replace(/<\?xml[^?]*\?>/g, '')    // XML-Deklaration entfernen
-		.replace(/\s+/g, ' ')             // Whitespace kollabieren
-		.trim();
-
-	const encoded = cleaned
-		.replace(/"/g, "'")    // Attribut-Anführungszeichen auf einfach
-		.replace(/%/g, '%25')  // % zuerst (verhindert Doppel-Encoding)
-		.replace(/#/g, '%23')  // URL-Fragment-Zeichen
-		.replace(/</g, '%3C')  // Pflicht für CSS-Parser
-		.replace(/>/g, '%3E');
-
-	return `url("data:image/svg+xml,${encoded}")`;
-}
-
-async function cmdFlags() {
-	head('🏳  Bifröst Flags');
-
-	// --codes de,en,fr  oder Standard
-	const codesArg = args.find($a => $a.startsWith('--codes=') || ($a === '--codes'));
-	let codes;
-	if (codesArg === '--codes') {
-		const idx = args.indexOf('--codes');
-		codes = (args[idx + 1] ?? '').split(',').map($c => $c.trim().toLowerCase()).filter(Boolean);
-	} else if (codesArg?.startsWith('--codes=')) {
-		codes = codesArg.slice(8).split(',').map($c => $c.trim().toLowerCase()).filter(Boolean);
-	} else {
-		codes = DEFAULT_FLAG_CODES;
-		info(`Keine --codes angegeben, nutze ${codes.length} Standard-Flaggen.`);
-	}
-
-	// --out public/css/flags.css  oder Standard
-	const outArg  = args.find($a => $a.startsWith('--out=') || ($a === '--out'));
-	let outRel;
-	if (outArg === '--out') {
-		const idx = args.indexOf('--out');
-		outRel = args[idx + 1] ?? 'public/css/flags.css';
-	} else if (outArg?.startsWith('--out=')) {
-		outRel = outArg.slice(6);
-	} else {
-		outRel = 'public/css/flags.css';
-	}
-	const outPath = join(cwd, outRel);
-
-	console.log(`   Ländercodes:  \x1b[2m${codes.join(', ')}\x1b[0m`);
-	console.log(`   Ausgabe:      \x1b[2m${outRel}\x1b[0m`);
-	console.log(`   Quelle:       \x1b[2m${CDN_BASE}/{code}.svg\x1b[0m`);
-
-	head('SVGs laden');
-
-	const results = await Promise.allSettled(
-		codes.map(async ($code) => {
-			const url = `${CDN_BASE}/${$code}.svg`;
-			const res = await fetch(url);
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			const svg = await res.text();
-			return { code: $code, uri: svgToDataUri(svg) };
-		})
-	);
-
-	const succeeded = [];
-	for (const result of results) {
-		if (result.status === 'fulfilled') {
-			ok(`.flag--${result.value.code}`);
-			succeeded.push(result.value);
-		} else {
-			const code = codes[results.indexOf(result)];
-			error(`${code}: ${result.reason?.message ?? 'Unbekannter Fehler'}`);
-		}
-	}
-
-	if (succeeded.length === 0) {
-		error('Keine Flaggen geladen. Prüfe die Internetverbindung.');
-		process.exit(1);
-	}
-
-	head('CSS schreiben');
-
-	const lines = [
-		`/* ============================================================`,
-		`   Bifröst Flags — generiert am ${new Date().toISOString().slice(0, 10)}`,
-		`   ${succeeded.length} Flaggen | Quelle: flag-icons (jsDelivr)`,
-		`   Verwendung: <span class="flag flag--de" aria-label="Deutsch"></span>`,
-		`   Neu generieren: npx bifrost flags`,
-		`   ============================================================ */`,
-		'',
-	];
-
-	for (const { code, uri } of succeeded) {
-		lines.push(`.flag--${code} { background-image: ${uri}; }`);
-	}
-
-	lines.push('');
-
-	await mkdir(dirname(outPath), { recursive: true });
-	await writeFile(outPath, lines.join('\n'), 'utf8');
-
-	ok(`${outRel} (${succeeded.length} Flaggen)`);
-
-	head('Fertig');
-	console.log(`
-   Einbinden in \x1b[36mmvc/views/partials/head.galdr.html\x1b[0m:
-
-     \x1b[36m<link rel="stylesheet" href="/css/flags.css">\x1b[0m
-
-   Verwendung im Template:
-
-     \x1b[36m<span class="flag flag--de" aria-label="Deutsch"></span>\x1b[0m
-     \x1b[36m<span class="flag flag--gb" aria-label="English"></span>\x1b[0m
-`);
-}
-
-
-// ── Command: init ─────────────────────────────────────────────────────────────
-
-async function cmdInit() {
-	head('🌈 Bifröst Init');
-	console.log(`   Zielverzeichnis: \x1b[2m${cwd}\x1b[0m`);
-	if (force) info('--force: Vorhandene Dateien werden überschrieben.');
-
-	head('Ordner');
-	for (const dir of SCAFFOLD.dirs) {
-		await createDir(dir);
-	}
-
-	head('Dateien');
-	for (const [rel, content] of Object.entries(SCAFFOLD.files)) {
-		await createFile(rel, content);
-	}
-
-	head('🏳  Flaggen generieren (de, en, fr, es, it)');
-	try {
-		// Gleiche Logik wie cmdFlags(), aber fest für die 5 Init-Sprachen
-		// 'gb' statt 'en' — flag-icons nutzt ISO-Ländercodes, kein 'en.svg'
-		const initCodes = ['de', 'gb', 'fr', 'es', 'it'];
-		const outPath   = join(cwd, 'public/css/flags.css');
-
-		const results = await Promise.allSettled(
-			initCodes.map(async ($code) => {
-				const res = await fetch(`${CDN_BASE}/${$code}.svg`);
-				if (!res.ok) throw new Error(`HTTP ${res.status}`);
-				const svg = await res.text();
-				return { code: $code, uri: svgToDataUri(svg) };
-			})
-		);
-
-		const lines = [
-			`/* Bifröst Flags — generiert von bifrost init — ${new Date().toISOString().slice(0, 10)} */`,
-			`/* Weitere Flaggen: npx bifrost flags --codes de,en,... */`,
-			'',
-		];
-		for (const r of results) {
-			if (r.status === 'fulfilled') {
-				ok(`.flag--${r.value.code}`);
-				lines.push(`.flag--${r.value.code} { background-image: ${r.value.uri}; }`);
-			} else {
-				const idx  = results.indexOf(r);
-				error(`${initCodes[idx]}: ${r.reason?.message} (übersprungen)`);
-			}
-		}
-		lines.push('');
-		await writeFile(outPath, lines.join('\n'), 'utf8');
-		ok('public/css/flags.css');
-	} catch ($err) {
-		error(`Flaggen konnten nicht geladen werden: ${$err.message}`);
-		info('Kein Internet? Später ausführen: npx bifrost flags --codes de,en,fr,es,it');
-	}
-
-	head('Fertig');
-	console.log(`
-   Starte die App mit:
-
-     \x1b[36mnode app.js\x1b[0m
-
-   Dann öffne: \x1b[36mhttp://localhost:3000\x1b[0m
-`);
-}
-
-
-// ── Code-Generatoren (make:*) ────────────────────────────────────────────────
-
-function getMakeName() {
-	const name = args[1];
-	if (!name) {
-		error('Bitte einen Namen angeben. (z. B. "User" oder "admin/Dashboard")');
-		process.exit(1);
-	}
-	return name;
-}
-
-async function cmdMakeController() {
-	const rawName = getMakeName();
-	// Erlaube auch Unterordner wie 'admin/User'
-	const parts = rawName.split('/');
-	const name = parts.pop();
-	const className = name.charAt(0).toUpperCase() + name.slice(1);
-	const subDir = parts.length > 0 ? '/' + parts.join('/') : '';
-	const pathName = rawName.toLowerCase();
-
-	const relDir = `mvc/controllers${subDir}`;
-	const fileName = `${relDir}/${className}Controller.js`;
-
-	const content = `import { BBController } from 'bifrost';
-
-export default class ${className}Controller extends BBController {
-	static path    = '/${pathName}';
-	static methods = ['get'];
-
-	async get() {
-		await this.render('${pathName}/index', { title: '${className}' });
-	}
-}
-`;
-	head(`Generiere Controller: ${className}Controller`);
-	await createDir(relDir);
-	await createFile(fileName, content);
-}
-
-async function cmdMakeForm() {
-	const rawName = getMakeName();
-	const parts = rawName.split('/');
-	const name = parts.pop();
-	const className = name.charAt(0).toUpperCase() + name.slice(1);
-	const subDir = parts.length > 0 ? '/' + parts.join('/') : '';
-
-	const relDir = `mvc/forms${subDir}`;
-	const fileName = `${relDir}/${className}Form.js`;
-
-	const content = `import { BBForm } from 'bifrost';
-
-export class ${className}Form extends BBForm {
-	fields() {
-		return {
-			name:  { type: 'text', label: 'Name', rules: ['required'] },
-			email: { type: 'email', label: 'E-Mail', rules: ['required', 'email'] }
-		};
-	}
-}
-`;
-	head(`Generiere Form: ${className}Form`);
-	await createDir(relDir);
-	await createFile(fileName, content);
-}
-
-async function cmdMakeView() {
-	const rawName = getMakeName();
-	const parts = rawName.split('/');
-	const name = parts.pop();
-	const subDir = parts.length > 0 ? '/' + parts.join('/') : '';
-
-	const relDir = `mvc/views${subDir}`;
-	const fileName = `${relDir}/${name.toLowerCase()}.galdr.html`;
-
-	const content = `{% layout "base" %}\n\n<h1>${name.charAt(0).toUpperCase() + name.slice(1)}</h1>\n<p>Hier entsteht die neue View.</p>\n\n{% endlayout %}\n`;
-	head(`Generiere View: ${fileName}`);
-	await createDir(relDir);
-	await createFile(fileName, content);
-}
-
 // ── Dispatch ──────────────────────────────────────────────────────────────────
 
 switch (command) {
 	case 'init':
-		await cmdInit();
+		await cmdInit(args, force, cwd, SCAFFOLD);
 		break;
 
 	case 'flags':
-		await cmdFlags();
+		await cmdFlags(args, cwd);
 		break;
 
 	case 'make:controller':
-		await cmdMakeController();
+		await cmdMakeController(args, force, cwd);
 		break;
 
 	case 'make:form':
-		await cmdMakeForm();
+		await cmdMakeForm(args, force, cwd);
 		break;
 
 	case 'make:view':
-		await cmdMakeView();
+		await cmdMakeView(args, force, cwd);
 		break;
 
 	default:
