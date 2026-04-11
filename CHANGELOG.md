@@ -5,6 +5,11 @@ Alle bemerkenswerten Änderungen an diesem Projekt werden in dieser Datei dokume
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 und dieses Projekt folgt dem [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.1] - 2026-04-11
+
+### Behoben (Fixed)
+- **Galdr**: Ein Fehler wurde behoben, bei dem Template-Kommentare (`{# ... #}`) innerhalb von Layout-Dateien nicht entfernt und stattdessen im finalen HTML ausgegeben wurden.
+
 ## [0.23.0] - 2026-04-07
 
 ### Hinzugefügt (Added)

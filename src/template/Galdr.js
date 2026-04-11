@@ -263,7 +263,10 @@ export class Galdr {
 
 		const [full, layoutName, slotContent] = match;
 		const layoutDirs   = [...(Galdr.#cfg.layouts?.length ? Galdr.#cfg.layouts : (Galdr.#cfg.views ?? [])), BUILTIN_LAYOUTS];
-		const layoutSource = await Galdr.#load(layoutName, layoutDirs);
+		let layoutSource = await Galdr.#load(layoutName, layoutDirs);
+
+		// Kommentare aus dem rohen Layout entfernen, bevor es weiterverarbeitet wird.
+		layoutSource = layoutSource.replace(/\{#[\s\S]*?#\}/g, '');
 
 		// Benannte Blöcke extrahieren: {% block name %}...{% endblock %}
 		const blocks    = new Map();
