@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { writeFile } from 'node:fs/promises';
+import { writeFile, readFile } from 'node:fs/promises';
 import { head, info, ok, error, createDir, createFile, CDN_BASE, svgToDataUri } from './utils.js';
 
 export async function cmdInit(args, force = false, cwd = process.cwd(), SCAFFOLD) {
@@ -14,7 +14,20 @@ export async function cmdInit(args, force = false, cwd = process.cwd(), SCAFFOLD
 
 	head('Dateien');
 	for (const [rel, content] of Object.entries(SCAFFOLD.files)) {
-		await createFile(rel, content, force, cwd);
+		let shouldForce = force;
+		
+		// Schutzfunktion für deine "Labor"-Entwicklung: Die echte package.json wird geschützt
+		if (rel === 'package.json' && force) {
+			try {
+				const existing = await readFile(join(cwd, 'package.json'), 'utf8');
+				if (existing.includes('"name": "bifrost"')) {
+					shouldForce = false;
+					info('Schütze Framework-eigene package.json vor dem Überschreiben!');
+				}
+			} catch {}
+		}
+		
+		await createFile(rel, content, shouldForce, cwd);
 	}
 
 	head('🏳  Flaggen generieren (de, en, fr, es, it)');

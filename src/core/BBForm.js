@@ -154,7 +154,7 @@ export class BBForm {
 		if (type === 'checkbox') {
 			const checked = this.values[$key] ? ' checked' : '';
 			let html = `<div class="form-group">\n`;
-			html += `  <label for="${id}" style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">\n`;
+			html += `  <label for="${id}" class="flex items-center gap-sm font-normal">\n`;
 			html += `    <input type="checkbox" id="${id}" name="${$key}" class="${errClass}" value="true"${checked}>\n`;
 			html += `    ${label}\n`;
 			html += `  </label>\n`;

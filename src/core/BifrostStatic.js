@@ -211,6 +211,13 @@ export class BifrostStatic {
 	 */
 	static createLiveReloadRune() {
 		return async (req, res, next) => {
+			// Route für das Live-Reload-Skript abfangen, um CSP "script-src 'self'" zu erfüllen
+			if (req.method === 'GET' && req.url === '/bifrost-livereload.js') {
+				res.writeHead(200, { 'Content-Type': 'application/javascript' });
+				res.end(`const _brio = io(); let _brfc = true; _brio.on('connect', () => { if(!_brfc) window.location.reload(); _brfc = false; });`);
+				return; // Anfrage hier beenden
+			}
+
 			// Nur bei normalen GET-Requests anwenden (keine APIs oder Assets)
 			if (req.method !== 'GET' || req.url.startsWith('/api') || req.url.startsWith('/socket.io')) {
 				return await next();
@@ -240,7 +247,7 @@ export class BifrostStatic {
 				}
 
 				if (isHtml) {
-					const script = `\n<!-- Bifröst Live-Reload -->\n<script src="/socket.io/socket.io.js"></script>\n<script>const _brio = io(); let _brfc = true; _brio.on('connect', () => { if(!_brfc) window.location.reload(); _brfc = false; });</script>\n`;
+					const script = `\n<!-- Bifröst Live-Reload -->\n<script src="/socket.io/socket.io.js"></script>\n<script src="/bifrost-livereload.js"></script>\n`;
 					if (chunk) {
 						let body = Buffer.isBuffer(chunk) ? chunk.toString('utf8') : chunk;
 						if (typeof body === 'string') {
