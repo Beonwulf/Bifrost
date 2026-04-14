@@ -5,6 +5,18 @@ Alle bemerkenswerten Änderungen an diesem Projekt werden in dieser Datei dokume
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 und dieses Projekt folgt dem [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.0] - 2026-04-14
+
+### Hinzugefügt (Added)
+- **BBForm**: Komplett neues, deklaratives Setup (`setup()` mit `addField()` / `addHidden()`), Datei-Upload-Support (`bind($data, $files)`), Initialdaten-Binding und neue Validatoren (`in`, `url`).
+- **Galdr**: Neuer Block-Tag `{% form $formObj %}` für vollautomatisches, sicheres Rendering von Formularen (inklusive dynamischer Fieldsets, CSRF, Placeholders und Hints).
+
+### Geändert (Changed)
+- **Galdr**: Der Parser für Filter/Pipes ist nun "Quote-Aware", sodass Strings in Argumenten sicher Pipes `|` und Doppelpunkte `:` enthalten dürfen.
+
+### Entfernt (Removed)
+- **BBForm**: Die alte, festverdrahtete HTML-Generierung (`renderField()`, `renderCsrf()`, `val()`, `error()`) wurde aus der Kern-Klasse entfernt. Das Rendering wird nun sauber nach dem MVC-Prinzip über die mitgelieferten Galdr-Partials (`form.galdr.html`) abgewickelt.
+
 ## [0.23.1] - 2026-04-11
 
 ### Behoben (Fixed)

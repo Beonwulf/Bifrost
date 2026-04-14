@@ -1,0 +1,30 @@
+<form method="{{ method | default:'POST' }}"{% if action %} action="{{ action }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% if class %} class="{{ class }}"{% endif %}{% if enctype %} enctype="{{ enctype }}"{% endif %}{% if novalidate %} novalidate{% endif %}>
+    {# Versteckte System- und Custom-Felder (inkl. CSRF-Token) #}
+    {% each form.hiddens %}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endeach %}
+
+    {# Felder ohne Fieldset rendern #}
+    {% each form.ungroupedFields %}
+        {% set $fieldName = @key %}
+        {% set $field = this %}
+        {% include "form-field" %}
+    {% endeach %}
+
+    {# Dynamische Fieldsets rendern #}
+    {% each form.fieldsets %}
+        <fieldset class="form-fieldset mb-6">
+            <legend class="text-lg font-bold mb-4">{{ name }}</legend>
+            
+            {% each fields %}
+                {% set $fieldName = @key %}
+                {% set $field = this %}
+                {% include "form-field" %}
+            {% endeach %}
+        </fieldset>
+    {% endeach %}
+
+    <div class="form-actions mt-4">
+        {{{ slot }}}
+    </div>
+</form>

@@ -264,12 +264,10 @@ Bifröst bietet eine integrierte `BBForm`-Klasse für Datenbindung, Filterung, V
 import { BBForm } from 'bifrost';
 
 export class ContactForm extends BBForm {
-    fields() {
-        return {
-            name:  { type: 'text', rules: ['required', 'min:3'] },
-            email: { type: 'email', rules: ['required', 'email'] },
-            agb:   { type: 'checkbox', rules: [(val) => val === true ? true : 'Bitte AGB akzeptieren.'] }
-        };
+    setup() {
+        this.addField('text', 'name', { label: 'Name', rules: ['required', 'min:3'] })
+            .addField('email', 'email', { label: 'E-Mail', rules: ['required', 'email'] })
+            .addField('checkbox', 'agb', { label: 'AGB', rules: [(val) => val === true ? true : 'Bitte AGB akzeptieren.'] });
     }
 }
 ```

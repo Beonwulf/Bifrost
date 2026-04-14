@@ -34,6 +34,10 @@
  *   {% include varName %}                — Partial, Name aus Variable
  *   {% include varName with $obj %}      — Partial, Name aus Variable + eigener Kontext
  *
+ *   {% form $formObj action="/api" %}    — Rendert ein BBForm-Formular automatisch
+ *     <button>Senden</button>            — (Inhalt landet im {{{ slot }}})
+ *   {% endform %}
+ *
  *   {% component "name" %}              — Strukturierte Komponente mit Named Slots
  *     {% slot head %}...{% endslot %}    — Benannter Slot (kompiliert mit äußerem Kontext)
  *     {% slot body %}...{% endslot %}    — Default-Slot: alles außerhalb von slot-Tags
@@ -70,13 +74,20 @@
  *       views:    '/absolute/path/to/views',     // String oder Array
  *       partials: '/absolute/path/to/partials',  // optional, Fallback: views-Dirs
  *       layouts:  '/absolute/path/to/layouts',   // optional, Fallback: views-Dirs
- *       cache:    true,                           // default: true
+ *       cache:    true,                          // default: true
  *   });
  *
  *   // Zusätzliche Dirs mit höchster Priorität prependen (erster Treffer gewinnt):
  *   Galdr.addViews('/my/override/views');
  *   Galdr.addLayouts('/my/override/layouts');
  *   Galdr.addPartials('/my/override/partials');
+ *
+ * Sicherheit & CSP (Content Security Policy):
+ *   - XSS-Schutz: {{ var }} entwertet standardmäßig HTML-Sonderzeichen.
+ *   - Script-Injection: {{ var | json }} nutzt striktes Unicode-Escaping (\u003c). 
+ *     Dadurch können Daten gefahrlos direkt innerhalb von <script>-Tags gerendert werden.
+ *   - Sandboxing: Die Engine nutzt `new Function` für Logik-Ausdrücke. Da Galdr rein 
+ *     serverseitig läuft, ist dies XSS-sicher und löst keinen Browser-CSP "unsafe-eval" Fehler aus.
  *
  * Suchreihenfolge: user-dirs (LIFO via unshift) → built-in src/template/views/
  * Absolute Pfade und Path-Traversal (..) sind in Template-Namen verboten.
@@ -242,6 +253,7 @@ export class Galdr {
 		if (out.includes('{% partial'))                           out = await Galdr.#resolvePartials(out, ctx);
 		if (out.includes('{% component') || out.includes('<x-')) out = await Galdr.#resolveComponents(out, ctx);
 		if (out.includes('{% include'))                           out = await Galdr.#resolveIncludes(out, ctx);
+		if (out.includes('{% form'))                              out = await Galdr.#resolveForms(out, ctx);
 		if (out.includes('{%'))                                   out = await Galdr.#resolveBlocks(out, ctx);
 		if (out.includes('{% url'))                               out =       Galdr.#resolveUrlTags(out, ctx);
 		out =       Galdr.#interpolate(out, ctx);
@@ -460,6 +472,29 @@ export class Galdr {
 		return out;
 	}
 
+	// ── Forms ─────────────────────────────────────────────────────────────────
+
+	static async #resolveForms($source, $data) {
+		// {% form $formVar action="..." %}...{% endform %}
+		return Galdr.#replaceBlock($source, 'form', 'endform', async ($expr, $inner) => {
+			const parts = $expr.trim().match(/^([^\s]+)(.*)$/);
+			if (!parts) return '';
+
+			const formObj = Galdr.#resolvePath(parts[1], $data);
+			if (!formObj) return '';
+
+			const attrs = Galdr.#parseTagAttrs(parts[2] || '');
+			const dirs = [...(Galdr.#cfg.partials?.length ? Galdr.#cfg.partials : (Galdr.#cfg.views ?? [])), BUILTIN_PARTIALS];
+			
+			try {
+				const src = await Galdr.#load('form', dirs);
+				const slot = await Galdr.#compile($inner, $data);
+				return await Galdr.#compile(src, { ...$data, ...attrs, form: formObj, slot });
+			} catch {
+				return `<!-- Galdr: form partial not found -->`;
+			}
+		});
+	}
 
 	// ── Block-Helpers ─────────────────────────────────────────────────────────
 
@@ -703,16 +738,43 @@ export class Galdr {
 	 * '{{ $price | currency:"," | upper }}' → { path: '$price', filters: [{name:'currency', args:[',']}, {name:'upper', args:[]}] }
 	 */
 	static #parsePipeExpr($expr) {
-		const parts   = $expr.split('|').map(s => s.trim());
-		const path    = parts[0];
+		const parts = [];
+		let current = '';
+		let inSingle = false;
+		let inDouble = false;
+
+		// Splitten am Pipe-Symbol (Pipes in Strings ignorieren)
+		for (let i = 0; i < $expr.length; i++) {
+			const c = $expr[i];
+			if (c === "'" && !inDouble) inSingle = !inSingle;
+			else if (c === '"' && !inSingle) inDouble = !inDouble;
+			
+			if (c === '|' && !inSingle && !inDouble) {
+				parts.push(current.trim());
+				current = '';
+			} else {
+				current += c;
+			}
+		}
+		parts.push(current.trim());
+
+		const path = parts[0];
 		const filters = parts.slice(1).map($seg => {
 			const colonIdx = $seg.indexOf(':');
 			if (colonIdx === -1) return { name: $seg.trim(), args: [] };
 			const name = $seg.slice(0, colonIdx).trim();
-			// Args: durch ':' getrennt, Quotes werden gestrippt
-			const args = $seg.slice(colonIdx + 1)
-				.split(':')
-				.map(a => a.trim().replace(/^['"](.*)['"]$/, '$1'));
+			
+			// Argumente am Doppelpunkt splitten (Doppelpunkte in Strings ignorieren)
+			const argStr = $seg.slice(colonIdx + 1);
+			const args = [];
+			let currArg = '';
+			let inS = false; let inD = false;
+			for (let i = 0; i < argStr.length; i++) {
+				const c = argStr[i];
+				if (c === "'" && !inD) inS = !inS; else if (c === '"' && !inS) inD = !inD;
+				if (c === ':' && !inS && !inD) { args.push(currArg.trim().replace(/^'"['"]$/, '$1')); currArg = ''; } else { currArg += c; }
+			}
+			args.push(currArg.trim().replace(/^'"['"]$/, '$1'));
 			return { name, args };
 		});
 		return { path, filters };
@@ -743,7 +805,9 @@ export class Galdr {
 			case 'nl2br':    return str.replace(/\n/g, '<br>');
 			case 'json': {
 				const serialized = JSON.stringify($val);
-				// Verhindert </script>-Ausbruch und HTML-Injection in <script>-Blöcken
+				// CSP/XSS-Schutz: Verhindert </script>-Ausbruch und HTML-Injection in <script>-Blöcken.
+				// Der Browser-Parser dekodiert \u003c innerhalb eines Scripts automatisch zu <,
+				// bricht den Script-Block aber nicht vorzeitig ab.
 				return serialized
 					.replace(/&/g,    '\\u0026')
 					.replace(/</g,    '\\u003c')
@@ -813,6 +877,8 @@ export class Galdr {
 	 *
 	 * Sicherheitshinweis: Ausdrücke stammen aus Template-Dateien (Entwickler-kontrolliert),
 	 * niemals aus User-Input. new Function ist hier bewusst eingesetzt.
+	 *
+	 * Da der Code auf dem Node-Server läuft, greifen Browser-CSPs ("unsafe-eval") hier nicht.
 	 *
 	 * Erlaubte Zeichen: Buchstaben, Ziffern, _ . @ $ Vergleichs-/Logik-Operatoren, (, ), ', "
 	 */
