@@ -5,6 +5,12 @@ Alle bemerkenswerten Änderungen an diesem Projekt werden in dieser Datei dokume
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 und dieses Projekt folgt dem [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.1] - 2026-04-20
+
+### Behoben (Fixed)
+- **BodyParser**: Fehler behoben, bei dem `$req.body` in bestimmten Fallbacks unerwartet als reiner String anstatt als Objekt interpretiert wurde.
+- **BBForm / Galdr**: Fehler beim Übernehmen von Formular-Werten (`bind`) und dem anschließenden Rendern innerhalb der Templates behoben.
+
 ## [0.24.0] - 2026-04-14
 
 ### Hinzugefügt (Added)

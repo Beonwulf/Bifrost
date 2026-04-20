@@ -1,42 +1,41 @@
-<div class="form-group form-{{ $field.type | default:'text' }} mb-4">
-	{% if $field.type === 'checkbox' %}
+	{% if field.type === 'checkbox' %}
 		<label for="form_{{ $fieldName }}" class="flex items-center gap-sm font-normal cursor-pointer">
-			<input type="checkbox" id="form_{{ $fieldName }}" name="{{ $fieldName }}" value="true" class="{% if $form.hasError($fieldName) %}is-error{% endif %}" {% if $form.values[$fieldName] %}checked{% endif %}>
-			{{ $field.label | default:$fieldName }}
+			<input type="checkbox" id="form_{{ $fieldName }}" name="{{ $fieldName }}" value="true" class="{% if $error %}is-error{% endif %}" {% if $value %}checked{% endif %}>
+			{% if $field.label %}{{ $field.label }}{% else %}{{ $fieldName }}{% endif %}
 		</label>
 
-	{% elseif $field.type === 'radio' %}
-		<span class="block font-medium mb-1">{{ $field.label | default:$fieldName }}</span>
+	{% elseif field.type === 'radio' %}
+		<span class="block font-medium mb-1">{% if $field.label %}{{ $field.label }}{% else %}{{ $fieldName }}{% endif %}</span>
 		<div class="flex flex-col gap-2 mt-1">
 			{% each $field.options %}
 				<label class="flex items-center gap-sm font-normal cursor-pointer">
-					<input type="radio" name="{{ $fieldName }}" value="{{ @key }}" class="{% if $form.hasError($fieldName) %}is-error{% endif %}" {% if $form.values[$fieldName] == @key %}checked{% endif %}>
+					<input type="radio" name="{{ $fieldName }}" value="{{ @key }}" class="{% if $error %}is-error{% endif %}" {% if $value == @key %}checked{% endif %}>
 					{{ this }}
 				</label>
 			{% endeach %}
 		</div>
 
 	{% else %}
-		<label for="form_{{ $fieldName }}" class="block font-medium mb-1">{{ $field.label | default:$fieldName }}</label>
+		<label for="form_{{ $fieldName }}" class="block font-medium mb-1">{% if $field.label %}{{ $field.label }}{% else %}{{ $fieldName }}{% endif %}</label>
 
 		{% if $field.type === 'textarea' %}
-			<textarea id="form_{{ $fieldName }}" name="{{ $fieldName }}" class="form-control {% if $form.hasError($fieldName) %}is-error{% endif %}"{% if $field.placeholder %} placeholder="{{ $field.placeholder }}"{% endif %}>{{ $form.values[$fieldName] }}</textarea>
+			<textarea id="form_{{ $fieldName }}" name="{{ $fieldName }}" class="form-control {% if $error %}is-error{% endif %}"{% if $field.placeholder %} placeholder="{{ $field.placeholder }}"{% endif %}>{{ $value }}</textarea>
 
 		{% elseif $field.type === 'select' %}
-			<select id="form_{{ $fieldName }}" name="{{ $fieldName }}" class="form-control {% if $form.hasError($fieldName) %}is-error{% endif %}">
+			<select id="form_{{ $fieldName }}" name="{{ $fieldName }}" class="form-control {% if $error %}is-error{% endif %}">
 				{% if $field.placeholder %}
-					<option value="" disabled {% if !$form.values[$fieldName] %}selected{% endif %}>{{ $field.placeholder }}</option>
+					<option value="" disabled {% if !$value %}selected{% endif %}>{{ $field.placeholder }}</option>
 				{% endif %}
 				{% each $field.options %}
-					<option value="{{ @key }}" {% if $form.values[$fieldName] == @key %}selected{% endif %}>{{ this }}</option>
+					<option value="{{ @key }}" {% if $value == @key %}selected{% endif %}>{{ this }}</option>
 				{% endeach %}
 			</select>
 
 		{% elseif $field.type === 'file' %}
-			<input type="file" id="form_{{ $fieldName }}" name="{{ $fieldName }}" class="form-control {% if $form.hasError($fieldName) %}is-error{% endif %}" {% if $field.multiple %}multiple{% endif %}>
+			<input type="file" id="form_{{ $fieldName }}" name="{{ $fieldName }}" class="form-control {% if $error %}is-error{% endif %}" {% if $field.multiple %}multiple{% endif %}>
 
 		{% else %}
-			<input type="{{ $field.type | default:'text' }}" id="form_{{ $fieldName }}" name="{{ $fieldName }}" value="{{ $form.values[$fieldName] }}" class="form-control {% if $form.hasError($fieldName) %}is-error{% endif %}"{% if $field.placeholder %} placeholder="{{ $field.placeholder }}"{% endif %}>
+			<input type="{{ $field.type | default:'text' }}" id="form_{{ $fieldName }}" name="{{ $fieldName }}" value="{{ $value }}" class="form-control {% if $error %}is-error{% endif %}"{% if $field.placeholder %} placeholder="{{ $field.placeholder }}"{% endif %}>
 		{% endif %}
 	{% endif %}
 
@@ -46,7 +45,6 @@
 	{% endif %}
 
 	{# Fehleranzeige (Zentralisiert für alle Feld-Typen) #}
-	{% if $form.hasError($fieldName) %}
-		<div class="form-error text-red-500 text-sm mt-1">{{ $form.errors[$fieldName] }}</div>
+	{% if $error %}
+		<div class="form-error text-red-500 text-sm mt-1">{{ $error }}</div>
 	{% endif %}
-</div>

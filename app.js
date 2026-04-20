@@ -3,6 +3,11 @@ import { fileURLToPath } from 'node:url';
 import { join }          from 'node:path';
 
 const __dir = fileURLToPath(new URL('.', import.meta.url));
+
+BifrostApp.enableBodyParser();
+BifrostApp.enableSessions();
+BifrostApp.enableCsrf();
+// BifrostApp.enableSsl('path/to/cert.pem', 'path/to/key.pem'); // Optional: SSL aktivieren
 const app   = new BifrostApp();
 
 BifrostApp.configureViews({

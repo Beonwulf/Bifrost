@@ -86,6 +86,10 @@ export class BifrostApp {
 		BifrostApp.cfg.ssl = false;
 		BifrostApp.cfg.sslCert = null;
 	}
+	static enableSessions() { BifrostApp.cfg.sessions = true; }
+	static disableSessions() { BifrostApp.cfg.sessions = false; }
+	static enableCsrf()     { BifrostApp.cfg.csrf = true; }
+	static disableCsrf()    { BifrostApp.cfg.csrf = false; }
 
 
 	// ── Instanz ───────────────────────────────────────────────────────────────

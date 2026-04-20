@@ -345,8 +345,18 @@ export class BifrostStatic {
 							}
 						}
 					}
+				} else if (ct.includes('application/x-www-form-urlencoded')) {
+					const parsed = new URLSearchParams(rawBuffer.toString('utf-8'));
+					for (const [key, val] of parsed.entries()) {
+						if ($req.body[key] !== undefined) {
+							if (!Array.isArray($req.body[key])) $req.body[key] = [$req.body[key]];
+							$req.body[key].push(val);
+						} else {
+							$req.body[key] = val;
+						}
+					}
 				} else {
-					$req.body = rawBuffer.toString('utf-8'); // form-urlencoded oder raw
+					$req.body = rawBuffer.toString('utf-8'); // raw
 				}
 			}
 			await $next();

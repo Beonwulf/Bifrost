@@ -8,7 +8,7 @@ TestApp/
 init/
 .env
 .DS_Store
-
+GEMINI.md
 # Scaffold / generierte Verzeichnisse
 /public/
 /mvc/

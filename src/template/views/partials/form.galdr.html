@@ -6,9 +6,7 @@
 
     {# Felder ohne Fieldset rendern #}
     {% each form.ungroupedFields %}
-        {% set $fieldName = @key %}
-        {% set $field = this %}
-        {% include "form-field" %}
+        <div class="form-group form-{{ this.type }} mb-4">{% include "form-field" with { fieldName: @key, field: this, value: form.values[@key], error: form.errors[@key] } %}</div>
     {% endeach %}
 
     {# Dynamische Fieldsets rendern #}
@@ -17,9 +15,7 @@
             <legend class="text-lg font-bold mb-4">{{ name }}</legend>
             
             {% each fields %}
-                {% set $fieldName = @key %}
-                {% set $field = this %}
-                {% include "form-field" %}
+                <div class="form-group form-{{ this.type }} mb-4">{% include "form-field" with { fieldName: @key, field: this, value: form.values[@key], error: form.errors[@key] } %}</div>
             {% endeach %}
         </fieldset>
     {% endeach %}

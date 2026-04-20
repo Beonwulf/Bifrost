@@ -122,6 +122,14 @@ export class Galdr {
 
 	static #cache = new Map();
 
+	static #JS_RESERVED = new Set([
+		'do','if','in','for','let','new','try','var','case','else','enum','eval','null','this',
+		'true','void','with','await','break','catch','class','const','false','super','throw',
+		'while','yield','delete','export','import','public','return','static','switch','typeof',
+		'default','extends','finally','package','private','continue','debugger','function',
+		'arguments','interface','protected','implements','instanceof'
+	]);
+
 
 	// ── Konfiguration ─────────────────────────────────────────────────────────
 
@@ -250,11 +258,11 @@ export class Galdr {
 
 		out = out.replace(/\{#[\s\S]*?#\}/g, '');  // {# Kommentare #} entfernen
 		if (out.includes('{% layout'))                            out = await Galdr.#resolveLayout(out, ctx);
+		if (out.includes('{%'))                                   out = await Galdr.#resolveBlocks(out, ctx);
 		if (out.includes('{% partial'))                           out = await Galdr.#resolvePartials(out, ctx);
 		if (out.includes('{% component') || out.includes('<x-')) out = await Galdr.#resolveComponents(out, ctx);
 		if (out.includes('{% include'))                           out = await Galdr.#resolveIncludes(out, ctx);
 		if (out.includes('{% form'))                              out = await Galdr.#resolveForms(out, ctx);
-		if (out.includes('{%'))                                   out = await Galdr.#resolveBlocks(out, ctx);
 		if (out.includes('{% url'))                               out =       Galdr.#resolveUrlTags(out, ctx);
 		out =       Galdr.#interpolate(out, ctx);
 
@@ -451,10 +459,29 @@ export class Galdr {
 					// 2. Object-Literal-Ausdruck (z.B. { items: _nav.main, class: 'foo' })
 					// Sicherheitshinweis: with-Ausdrücke stammen aus Template-Dateien (Dev-kontrolliert)
 					try {
-						const normalized = trimmed.replace(/\$([a-zA-Z_])/g, '$1');
-						const keys = Object.keys($data).filter(k => /^[a-zA-Z_$][\w$]*$/.test(k));
-						const vals = keys.map(k => $data[k]);
-						const evaluated = new Function(...keys, `return (${normalized})`).call(null, ...vals);
+						let normalized = trimmed;
+						// @ Variablen für JS-Auswertung sicher machen (z.B. @key -> __key)
+						normalized = normalized.replace(/@([a-zA-Z_]+)/g, '__$1');
+						
+						const paramNames = [];
+						const vals = [];
+						for (const k of Object.keys($data)) {
+							if (k.startsWith('@')) {
+								paramNames.push('__' + k.slice(1));
+								vals.push($data[k]);
+							} else if (/^[a-zA-Z_$][\w$]*$/.test(k)) {
+								if (!Galdr.#JS_RESERVED.has(k)) {
+									paramNames.push(k);
+									vals.push($data[k]);
+								}
+								if (!k.startsWith('$')) {
+									paramNames.push('$' + k);
+									vals.push($data[k]);
+								}
+							}
+						}
+
+						const evaluated = new Function(...paramNames, `return (${normalized})`).call($data['this'] ?? null, ...vals);
 						if (evaluated != null && typeof evaluated === 'object') {
 							ctx = { ...$data, ...evaluated };
 						}
@@ -772,9 +799,9 @@ export class Galdr {
 			for (let i = 0; i < argStr.length; i++) {
 				const c = argStr[i];
 				if (c === "'" && !inD) inS = !inS; else if (c === '"' && !inS) inD = !inD;
-				if (c === ':' && !inS && !inD) { args.push(currArg.trim().replace(/^'"['"]$/, '$1')); currArg = ''; } else { currArg += c; }
+				if (c === ':' && !inS && !inD) { args.push(currArg.trim().replace(/^['"](.*)['"]$/, '$1')); currArg = ''; } else { currArg += c; }
 			}
-			args.push(currArg.trim().replace(/^'"['"]$/, '$1'));
+			args.push(currArg.trim().replace(/^['"](.*)['"]$/, '$1'));
 			return { name, args };
 		});
 		return { path, filters };
@@ -883,17 +910,28 @@ export class Galdr {
 	 * Erlaubte Zeichen: Buchstaben, Ziffern, _ . @ $ Vergleichs-/Logik-Operatoren, (, ), ', "
 	 */
 	static #evalExpr($expr, $data) {
-		// $ aus dem Ausdruck entfernen, damit $user.isAdmin wie user.isAdmin ausgewertet wird
-		const normalized = $expr.replace(/\$([a-zA-Z_])/g, '$1');
-		const safe = /^[a-zA-Z0-9_.@\s!&|><=?:()[\]'".-]+$/.test(normalized);
+		let normalized = $expr;
+		// @ Variablen für JS-Auswertung sicher machen (z.B. @key -> __key)
+		normalized = normalized.replace(/@([a-zA-Z_]+)/g, '__$1');
+
+		const safe = /^[a-zA-Z0-9_.@\s!&|><=?:()[\]'".-]+$/.test($expr);
 		if (!safe) {
 			// Unsicherer Ausdruck → nur einfache Pfad-Auflösung
 			return Boolean(Galdr.#resolvePath($expr, $data));
 		}
 		try {
-			const keys = Object.keys($data).filter(k => /^[a-zA-Z_$][\w$]*$/.test(k));
-			const vals = keys.map(k => $data[k]);
-			return Boolean(new Function(...keys, `return !!(${normalized})`).call(null, ...vals));
+			const paramNames = [];
+			const vals = [];
+			for (const k of Object.keys($data)) {
+				if (k.startsWith('@')) {
+					paramNames.push('__' + k.slice(1));
+					vals.push($data[k]);
+				} else if (/^[a-zA-Z_$][\w$]*$/.test(k)) {
+					if (!Galdr.#JS_RESERVED.has(k)) { paramNames.push(k); vals.push($data[k]); }
+					if (!k.startsWith('$'))       { paramNames.push('$' + k); vals.push($data[k]); }
+				}
+			}
+			return Boolean(new Function(...paramNames, `return !!(${normalized})`).call($data['this'] ?? null, ...vals));
 		} catch {
 			return Boolean(Galdr.#resolvePath($expr, $data));
 		}

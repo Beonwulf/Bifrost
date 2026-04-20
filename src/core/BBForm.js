@@ -24,7 +24,9 @@ export class BBForm {
 		if ($type === 'hidden') {
 			this.addHidden($name, $options.value || '');
 		} else {
-			this.#fields.set($name, { type: $type, ...$options });
+			$options.type = $type;
+			$options.name = $name;
+			this.#fields.set($name, $options );
 		}
 		return this; // für Chaining
 	}
